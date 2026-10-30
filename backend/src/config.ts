@@ -9,6 +9,9 @@ const schema = z.object({
   MAX_UPLOAD_MB: z.coerce.number().positive().default(10),
   COOKIE_SECURE: z.enum(['true', 'false']).default('false'),
   APP_URL: z.string().default('http://localhost:5173'),
+  RESEND_API_KEY: z.string().optional(),
+  MAIL_FROM: z.string().default('FinUp <onboarding@resend.dev>'),
+  LOGIN_CODES: z.enum(['true', 'false']).optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().default('claude-sonnet-5-5'),
   BANK_PROVIDER: z.string().optional(),
@@ -29,6 +32,15 @@ const emptyToUndef = (v?: string) => (v && v.trim() ? v.trim() : undefined);
 export const config = {
   port: env.PORT,
   nodeEnv: env.NODE_ENV,
+  resendApiKey: emptyToUndef(env.RESEND_API_KEY),
+  mailFrom: env.MAIL_FROM,
+  /** Email sign-in codes: on by default when a real mail transport exists, never implicit in tests. */
+  loginCodes:
+    env.NODE_ENV === 'test'
+      ? env.LOGIN_CODES === 'true'
+      : env.LOGIN_CODES
+        ? env.LOGIN_CODES === 'true'
+        : Boolean(emptyToUndef(env.RESEND_API_KEY)),
   databaseUrl: env.NODE_ENV === 'test' ? env.TEST_DATABASE_URL : env.DATABASE_URL,
   maxUploadBytes: Math.floor(env.MAX_UPLOAD_MB * 1024 * 1024),
   cookieSecure: env.COOKIE_SECURE === 'true',

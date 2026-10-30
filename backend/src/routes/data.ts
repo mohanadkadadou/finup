@@ -18,6 +18,8 @@ import { ApiError } from '../errors.js';
 import { planGoal } from '../goals.js';
 import { planPurchase, spendByWeekday, topPayees, topSpendDays, wasteTips } from '../insights.js';
 import { clearDemo, loadDemo } from '../demo.js';
+import { sendMail } from '../mailer.js';
+import { formatMinor } from '../money.js';
 import { idParam, parse, uid, wrap } from './util.js';
 
 export const dataRouter = Router();
@@ -257,6 +259,52 @@ dataRouter.get(
           ? 'You have transactions in several currencies. Totals are shown per currency and never combined.'
           : null,
     });
+  }),
+);
+
+// ---- emailed monthly report (always to the signed-in user's own address, never to a free-form recipient)
+dataRouter.post(
+  '/reports/email',
+  wrap(async (req, res) => {
+    const q = parse(
+      z.object({
+        month: z
+          .string()
+          .regex(/^\d{4}-\d{2}$/)
+          .optional(),
+      }),
+      req.body ?? {},
+    );
+    const user = await query<{ email: string }>('SELECT email FROM users WHERE id=$1', [uid(req)]);
+    const txs = await loadTxs(uid(req));
+    const currency = primaryCurrency(txs);
+    if (!currency || !user[0])
+      throw new ApiError(409, 'NO_DATA', 'There are no confirmed transactions to report yet.');
+    const months = [
+      ...new Set(txs.filter((t) => t.currency === currency).map((t) => monthOf(t.booked_on))),
+    ].sort();
+    const month = q.month ?? months[months.length - 1]!;
+    const sm = summarize(txs, currency, monthPeriod(month));
+    const f = (n: number) => `${formatMinor(n, currency)} ${currency}`;
+    const lines = [
+      `FinUp report for ${month} (${currency}, from your confirmed transactions)`,
+      `Income: ${f(sm.income_minor)}`,
+      `Expenses: ${f(sm.expenses_minor)}`,
+      `Net: ${f(sm.net_minor)}`,
+      `Transactions: ${sm.transaction_count}`,
+      '',
+      'Top spending categories:',
+      ...sm.by_category
+        .slice(0, 5)
+        .map((c) => `- ${c.category}: ${f(c.total_minor)} (${(c.share_bp / 100).toFixed(1)}%)`),
+    ];
+    const sent = await sendMail({
+      to: user[0].email,
+      subject: `FinUp report ${month} / تقرير ${month}`,
+      text: lines.join('\n'),
+    });
+    if (!sent) throw new ApiError(503, 'MAIL_FAILED', 'Could not send the email right now.');
+    res.json({ sent: true, month, to: user[0].email });
   }),
 );
 

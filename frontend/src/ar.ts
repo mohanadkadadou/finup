@@ -433,6 +433,14 @@ export const AR: Record<string, string> = {
     'تم تغيير كلمة السر. سُجّل الخروج من الأجهزة الأخرى.',
   Verified: 'مؤكَّد',
   'Not verified': 'غير مؤكَّد',
+  'We emailed you a 6-digit sign-in code. It is valid for 10 minutes.':
+    'أرسلنا لك رمز دخول من 6 أرقام إلى بريدك. صالح لمدة 10 دقائق.',
+  'Sign-in code': 'رمز الدخول',
+  'Email report': 'تقرير بالبريد',
+  'Send the latest month summary to your own email address.':
+    'أرسل ملخص آخر شهر إلى بريدك الإلكتروني.',
+  'Email me the report': 'أرسل لي التقرير',
+  'Report for {month} sent to {to}.': 'تم إرسال تقرير {month} إلى {to}.',
   'Verifying lets you recover your account if you forget the password.':
     'تأكيد البريد يتيح لك استعادة حسابك إن نسيت كلمة السر.',
   'Send verification email': 'أرسل بريد التأكيد',

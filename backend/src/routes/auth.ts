@@ -1,3 +1,4 @@
+import { createHash, randomInt } from 'node:crypto';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
@@ -18,6 +19,8 @@ import { ApiError } from '../errors.js';
 import { parse, uid, wrap } from './util.js';
 
 export const authRouter = Router();
+
+const sha = (v: string) => createHash('sha256').update(v).digest('hex');
 
 const limiter = rateLimit({
   windowMs: 15 * 60_000,
@@ -82,8 +85,48 @@ authRouter.post(
     const ok = rows[0] ? await verifyPassword(password, rows[0].password_hash) : false;
     if (!rows[0] || !ok)
       throw new ApiError(401, 'BAD_CREDENTIALS', 'Email or password is incorrect.');
+    if (config.loginCodes) {
+      const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+      await query('DELETE FROM login_challenges WHERE user_id=$1', [rows[0].id]);
+      const ch = await query<{ id: string }>(
+        "INSERT INTO login_challenges(user_id, code_hash, expires_at) VALUES ($1,$2, now() + interval '10 minutes') RETURNING id",
+        [rows[0].id, sha(code)],
+      );
+      const sent = await sendMail({
+        to: email,
+        subject: `FinUp sign-in code ${code} / رمز الدخول ${code}`,
+        text: `Your FinUp sign-in code is ${code}. It is valid for 10 minutes. Never share it.\n\nرمز الدخول إلى FinUp: ${code}\nصالح لمدة 10 دقائق. لا تشاركه مع أحد.\n\nIf this was not you, change your password.`,
+      });
+      if (!sent)
+        throw new ApiError(503, 'MAIL_FAILED', 'Could not send the sign-in code. Try again later.');
+      res.status(202).json({ step: 'code', challenge_id: ch[0]!.id });
+      return;
+    }
     await createSession(res, rows[0].id);
     res.json({ user: { id: rows[0].id, email } });
+  }),
+);
+
+authRouter.post(
+  '/login/verify',
+  limiter,
+  wrap(async (req, res) => {
+    const { challenge_id, code } = parse(
+      z.object({ challenge_id: z.string().uuid(), code: z.string().regex(/^\d{6}$/) }),
+      req.body,
+    );
+    const bad = new ApiError(401, 'BAD_CODE', 'The code is wrong or expired.');
+    const rows = await query<{ user_id: string; code_hash: string; email: string }>(
+      `UPDATE login_challenges c SET attempts = attempts + 1
+       FROM users u
+       WHERE c.id=$1 AND u.id=c.user_id AND c.used_at IS NULL AND c.expires_at > now() AND c.attempts < 5
+       RETURNING c.user_id, c.code_hash, u.email`,
+      [challenge_id],
+    );
+    if (!rows[0] || rows[0].code_hash !== sha(code)) throw bad;
+    await query('UPDATE login_challenges SET used_at=now() WHERE id=$1', [challenge_id]);
+    await createSession(res, rows[0].user_id);
+    res.json({ user: { id: rows[0].user_id, email: rows[0].email } });
   }),
 );
 
@@ -131,7 +174,7 @@ authRouter.post(
         subject: 'Reset your FinUp password / إعادة تعيين كلمة سر FinUp',
         text: `Reset your FinUp password (valid for 1 hour):\n${link}\n\nأعد تعيين كلمة سر FinUp (صالح ساعة واحدة):\n${link}\n\nIf you did not ask for this, ignore this message; your password is unchanged.`,
       }).catch((e: unknown) => console.error(e));
-      if (config.nodeEnv === 'development') devLink = link;
+      if (config.nodeEnv === 'development' && !config.resendApiKey) devLink = link;
     }
     res.status(202).json({ ok: true, ...(devLink ? { dev_link: devLink } : {}) });
   }),
@@ -194,7 +237,10 @@ authRouter.post(
       return;
     }
     const link = await sendVerification(uid(req), rows[0].email);
-    res.json({ sent: true, ...(config.nodeEnv === 'development' ? { dev_link: link } : {}) });
+    res.json({
+      sent: true,
+      ...(config.nodeEnv === 'development' && !config.resendApiKey ? { dev_link: link } : {}),
+    });
   }),
 );
 

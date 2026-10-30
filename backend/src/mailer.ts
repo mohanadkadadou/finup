@@ -10,14 +10,37 @@ export interface Mail {
 export const outbox: Mail[] = [];
 
 /**
- * No real email provider is wired in yet. In development the message (including its link) is printed to the
- * server console. In production nothing is sent and the caller is told so; links are never written to logs there.
+ * Sends through Resend when RESEND_API_KEY is set. Without a key, development prints the message to the server
+ * console and production sends nothing (links/codes are never logged there).
  * Returns true only when a message was actually handed to a transport.
  */
 export async function sendMail(mail: Mail): Promise<boolean> {
   if (config.nodeEnv === 'test') {
     outbox.push(mail);
     return true;
+  }
+  if (config.resendApiKey) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${config.resendApiKey}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: config.mailFrom,
+          to: [mail.to],
+          subject: mail.subject,
+          text: mail.text,
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) console.error(`[mail] Resend rejected the message: HTTP ${res.status}`);
+      return res.ok;
+    } catch (e) {
+      console.error('[mail] Resend request failed:', e instanceof Error ? e.message : e);
+      return false;
+    }
   }
   if (config.nodeEnv === 'development') {
     console.log(`\n[mail:console] to=${mail.to}\nsubject: ${mail.subject}\n${mail.text}\n`);

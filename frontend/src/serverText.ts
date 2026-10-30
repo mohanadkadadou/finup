@@ -17,6 +17,16 @@ const RULES: Rule[] = [
     exact('Your session has expired. Please sign in again.'),
     'انتهت جلستك. الرجاء تسجيل الدخول من جديد.',
   ],
+  [exact('The code is wrong or expired.'), 'الرمز خاطئ أو منتهي الصلاحية.'],
+  [
+    exact('Could not send the sign-in code. Try again later.'),
+    'تعذّر إرسال رمز الدخول. حاول لاحقاً.',
+  ],
+  [exact('Could not send the email right now.'), 'تعذّر إرسال البريد الآن.'],
+  [
+    exact('There are no confirmed transactions to report yet.'),
+    'لا توجد معاملات مؤكَّدة لإرسال تقرير عنها بعد.',
+  ],
   [exact('Email or password is incorrect.'), 'البريد الإلكتروني أو كلمة السر غير صحيحة.'],
   [exact('An account with this email already exists.'), 'يوجد حساب بهذا البريد الإلكتروني مسبقاً.'],
   [exact('Request validation failed.'), 'بيانات الطلب غير صالحة. تحقق من الحقول وأعد المحاولة.'],

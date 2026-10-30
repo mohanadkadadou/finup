@@ -55,6 +55,18 @@ export function SettingsPage({ ctx }: { ctx: Ctx }) {
     }
   };
 
+  const emailReport = async () => {
+    try {
+      const r = await api.send<{ to: string; month: string }>('POST', '/reports/email', {});
+      setMsg({
+        kind: 'ok',
+        text: t('Report for {month} sent to {to}.', { month: r.month, to: r.to }),
+      });
+    } catch (x) {
+      setMsg({ kind: 'error', text: errMsg(x) });
+    }
+  };
+
   return (
     <>
       <PageHeader title={t('Settings & privacy')} sub={ctx.me.user.email} />
@@ -85,6 +97,13 @@ export function SettingsPage({ ctx }: { ctx: Ctx }) {
               )}
             </>
           )}
+        </section>
+        <section className="card">
+          <h2>{t('Email report')}</h2>
+          <p className="muted small">
+            {t('Send the latest month summary to your own email address.')}
+          </p>
+          <button onClick={() => void emailReport()}>{t('Email me the report')}</button>
         </section>
         <section className="card">
           <h2>{t('Change password')}</h2>

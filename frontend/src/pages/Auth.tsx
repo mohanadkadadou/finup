@@ -12,6 +12,8 @@ export function AuthPage({ onDone, error }: { onDone: () => Promise<void>; error
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(error);
   const [busy, setBusy] = useState(false);
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState('');
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -21,9 +23,19 @@ export function AuthPage({ onDone, error }: { onDone: () => Promise<void>; error
       if (mode === 'forgot') {
         const r = await api.send<{ dev_link?: string }>('POST', '/auth/forgot', { email });
         setSent({ devLink: r.dev_link });
-      } else {
-        await api.send('POST', `/auth/${mode}`, { email, password });
+      } else if (challenge) {
+        await api.send('POST', '/auth/login/verify', { challenge_id: challenge, code });
         await onDone();
+      } else {
+        const r = await api.send<{ step?: string; challenge_id?: string }>(
+          'POST',
+          `/auth/${mode}`,
+          { email, password },
+        );
+        if (r?.step === 'code' && r.challenge_id) {
+          setChallenge(r.challenge_id);
+          setCode('');
+        } else await onDone();
       }
     } catch (x) {
       setErr(errMsg(x));
@@ -42,7 +54,27 @@ export function AuthPage({ onDone, error }: { onDone: () => Promise<void>; error
           <p className="muted">{t('Smarter money, Brighter tomorrow')}</p>
         </div>
         {err && <Alert>{err}</Alert>}
-        <label>
+        {challenge && (
+          <>
+            <Alert kind="ok">
+              {t('We emailed you a 6-digit sign-in code. It is valid for 10 minutes.')}
+            </Alert>
+            <label>
+              {t('Sign-in code')}
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              />
+            </label>
+          </>
+        )}
+        <label hidden={Boolean(challenge)}>
           {t('Email')}
           <input
             type="email"
@@ -52,7 +84,7 @@ export function AuthPage({ onDone, error }: { onDone: () => Promise<void>; error
             onChange={(e) => setEmail(e.target.value)}
           />
         </label>
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && !challenge && (
           <label>
             {t('Password')}{' '}
             {mode === 'register' && <span className="small">{t('(at least 10 characters)')}</span>}

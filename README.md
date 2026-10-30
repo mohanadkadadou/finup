@@ -128,4 +128,6 @@ Honest list, roughly by priority:
 - **Change password** (signed in): `POST /api/auth/change-password` needs the current password and signs out other devices.
 - **Email verification**: a link valid for 24 hours is sent at sign-up (`POST /api/auth/verify`, resend via `/api/auth/verify/request`). Verification does not block using the app.
 - Tokens are random, stored only as SHA-256 hashes, single-use and replaced by newer requests.
-- **No email provider is connected yet** (`backend/src/mailer.ts`). In development the email is printed to the server console and the link is also returned to the page (`dev_link`, development only). In production nothing is sent until a real transport is added. Set `APP_URL` to the public address used in links.
+- **Email via Resend** (`backend/src/mailer.ts`): set `RESEND_API_KEY` and `MAIL_FROM` (see `.env.example`). Without a key, development prints emails to the console and production sends nothing. The default sender `onboarding@resend.dev` only delivers to the Resend account owner; verify a domain in Resend before real users sign up.
+- **Sign-in codes**: when a key is set (or `LOGIN_CODES=true`), password login returns `202` and emails a 6-digit code (10 minutes, 5 attempts, single use); `POST /api/auth/login/verify` creates the session.
+- **Emailed report**: `POST /api/reports/email` sends the month summary to the signed-in user's own address only (Settings → Email me the report).
