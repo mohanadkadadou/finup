@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Ctx } from '../App';
 import { api, errMsg } from '../api';
-import { Alert, CategoryBars, Empty, PageHeader, Stat, TrendChart } from '../components/ui';
+import {
+  Alert,
+  CategoryBars,
+  Empty,
+  PageHeader,
+  Stat,
+  TrendChart,
+  Skeleton,
+} from '../components/ui';
 import { fmt, monthLabel, pct } from '../format';
 import { tr } from '../serverText';
 import { useT } from '../i18n';
@@ -104,7 +112,7 @@ export function DashboardPage({ ctx }: { ctx: Ctx }) {
   };
 
   if (a.err) return <Alert>{a.err}</Alert>;
-  if (!d) return <p className="muted">{t('Loading…')}</p>;
+  if (!d) return <Skeleton />;
   if (d.empty) {
     return (
       <>

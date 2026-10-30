@@ -163,21 +163,23 @@ export function App() {
             <button onClick={() => void clearDemo()}>{t('Clear demo data')}</button>
           </div>
         )}
-        <Routes>
-          <Route path="/" element={<DashboardPage ctx={ctx} />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/import" element={<ImportPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/planner" element={<PlannerPage />} />
-          <Route path="/more" element={<MorePage ctx={ctx} />} />
-          <Route path="/budgets" element={<BudgetsPage />} />
-          <Route path="/goals" element={<GoalsPage />} />
-          <Route path="/assistant" element={<AssistantPage />} />
-          <Route path="/accounts" element={<AccountsPage />} />
-          <Route path="/settings" element={<SettingsPage ctx={ctx} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <div className="page" key={location.pathname}>
+          <Routes>
+            <Route path="/" element={<DashboardPage ctx={ctx} />} />
+            <Route path="/transactions" element={<TransactionsPage />} />
+            <Route path="/import" element={<ImportPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/planner" element={<PlannerPage />} />
+            <Route path="/more" element={<MorePage ctx={ctx} />} />
+            <Route path="/budgets" element={<BudgetsPage />} />
+            <Route path="/goals" element={<GoalsPage />} />
+            <Route path="/assistant" element={<AssistantPage />} />
+            <Route path="/accounts" element={<AccountsPage />} />
+            <Route path="/settings" element={<SettingsPage ctx={ctx} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </main>
     </div>
   );

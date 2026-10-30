@@ -1,4 +1,4 @@
-import { Alert, CategoryBars, Empty, PageHeader, TrendChart } from '../components/ui';
+import { Alert, CategoryBars, Empty, PageHeader, TrendChart, Skeleton } from '../components/ui';
 import { fmt, monthLabel } from '../format';
 import { tr } from '../serverText';
 import { useT } from '../i18n';
@@ -9,7 +9,7 @@ export function AnalyticsPage() {
   const a = useAnalytics();
   const d = a.data;
   if (a.err) return <Alert>{a.err}</Alert>;
-  if (!d) return <p className="muted">{t('Loading…')}</p>;
+  if (!d) return <Skeleton />;
   if (d.empty)
     return (
       <>

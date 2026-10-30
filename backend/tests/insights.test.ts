@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Tx } from '../src/analytics.js';
 import {
+  categoryByMonth,
   planPurchase,
   spendByWeekday,
   topPayees,
@@ -107,5 +108,28 @@ describe('planPurchase', () => {
     );
     expect(p.shortfall_minor).toBeNull();
     expect(p.months_at_current_net).toBeNull();
+  });
+});
+
+describe('categoryByMonth', () => {
+  it('finds the top category of each month and the one that led most often', () => {
+    const r = categoryByMonth(data, 'TRY');
+    expect(r.months.map((m) => m.month)).toEqual(['2026-09', '2026-10']);
+    expect(r.months.map((m) => m.top!.category)).toEqual(['Housing', 'Housing']);
+    expect(r.months[1]!.categories.map((c) => c.category)).toEqual([
+      'Housing',
+      'Shopping',
+      'Dining',
+    ]);
+    expect(r.leader).toEqual({ category: 'Housing', months_led: 2, total_minor: 800000 });
+    expect(r.overall[0]!.share_bp).toBeGreaterThan(5000);
+  });
+  it('keeps only the latest months and ignores income and other currencies', () => {
+    const r = categoryByMonth(data, 'TRY', 1);
+    expect(r.months).toHaveLength(1);
+    expect(r.months[0]!.total_minor).toBe(400000 + 12000 + 150000);
+  });
+  it('is empty without expenses', () => {
+    expect(categoryByMonth([], 'TRY')).toEqual({ months: [], leader: null, overall: [] });
   });
 });

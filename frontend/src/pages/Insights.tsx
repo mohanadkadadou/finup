@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errMsg } from '../api';
-import { Alert, Empty, PageHeader, Stat } from '../components/ui';
+import { Alert, Empty, PageHeader, Stat, Skeleton } from '../components/ui';
 import { dayLabel, fmt, monthLabel, weekdayLabel } from '../format';
 import { useT } from '../i18n';
 
@@ -34,6 +34,98 @@ interface InsightsData {
   weekday: { weekday: number; total_minor: number; count: number; avg_per_day_minor: number }[];
   top_days: { date: string; weekday: number; total_minor: number; count: number }[];
   tips: Tip[];
+  category_months: {
+    months: {
+      month: string;
+      total_minor: number;
+      top: { category: string; total_minor: number; share_bp: number } | null;
+      categories: { category: string; total_minor: number }[];
+    }[];
+    leader: { category: string; months_led: number; total_minor: number } | null;
+    overall: { category: string; total_minor: number; share_bp: number }[];
+  };
+}
+
+const PALETTE = ['#00c26a', '#0f4d3e', '#2f80ed', '#f2994a', '#9b51e0', '#eb5757'];
+const OTHER = '#9aa5ad';
+
+function CategoryMonths({
+  data,
+  money,
+}: {
+  data: InsightsData['category_months'];
+  money: (n: number) => string;
+}) {
+  const { t } = useT();
+  if (data.months.length === 0) return null;
+  const colorOf = (cat: string) => {
+    const i = data.overall.findIndex((c) => c.category === cat);
+    return i >= 0 && i < PALETTE.length ? PALETTE[i]! : OTHER;
+  };
+  const legend = data.overall.slice(0, PALETTE.length);
+  const maxTotal = Math.max(1, ...data.months.map((m) => m.total_minor));
+  return (
+    <section className="card mt cm">
+      <div className="row-between">
+        <h2>{t('Where most of your money went, month by month')}</h2>
+      </div>
+      {data.leader && (
+        <p className="cm-lead">
+          <span className="cm-dot" style={{ background: colorOf(data.leader.category) }} />
+          {t('{category} was your biggest expense in {n} of {total} months ({amount} in total).', {
+            category: t(data.leader.category),
+            n: data.leader.months_led,
+            total: data.months.length,
+            amount: money(data.leader.total_minor),
+          })}
+        </p>
+      )}
+      <ul className="cm-legend">
+        {legend.map((c) => (
+          <li key={c.category}>
+            <span className="cm-dot" style={{ background: colorOf(c.category) }} />
+            {t(c.category)}
+          </li>
+        ))}
+      </ul>
+      <ol className="cm-rows">
+        {[...data.months].reverse().map((m, idx) => (
+          <li key={m.month} style={{ ['--i' as string]: idx }}>
+            <span className="cm-month small">{monthLabel(m.month)}</span>
+            <div className="cm-track">
+              <div className="cm-bar" style={{ width: `${(m.total_minor / maxTotal) * 100}%` }}>
+                {m.categories.map((c) => (
+                  <span
+                    key={c.category}
+                    title={`${t(c.category)}: ${money(c.total_minor)}`}
+                    style={{
+                      flexGrow: c.total_minor,
+                      background: colorOf(c.category),
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <span className="cm-top small">
+              {m.top ? (
+                <>
+                  <strong>{t(m.top.category)}</strong> · {(m.top.share_bp / 100).toFixed(0)}%
+                  <span className="muted"> · {money(m.top.total_minor)}</span>
+                </>
+              ) : (
+                '—'
+              )}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="muted small">
+        {t(
+          'Each bar is a month of spending, split by category. The label shows that month’s biggest category.',
+        )}
+      </p>
+    </section>
+  );
 }
 
 /** Keeps digits and currency in one left-to-right run inside Arabic sentences. */
@@ -59,7 +151,7 @@ export function InsightsPage() {
   }, [load]);
 
   if (err) return <Alert>{err}</Alert>;
-  if (!data) return <p className="muted">{t('Loading…')}</p>;
+  if (!data) return <Skeleton />;
   if (data.empty)
     return (
       <>
@@ -165,6 +257,8 @@ export function InsightsPage() {
           sub={t('avg {amount} per day', { amount: money(peakWd.avg_per_day_minor) })}
         />
       </div>
+
+      <CategoryMonths data={data.category_months} money={money} />
 
       <div className="grid g3 mt">
         <section className="card">

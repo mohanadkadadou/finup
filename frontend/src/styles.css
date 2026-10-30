@@ -1033,3 +1033,323 @@ input[type='range'] {
     overflow-wrap: anywhere;
   }
 }
+
+/* ===== Polish layer: depth, motion, usability =====
+   All motion is transform/opacity only and switched off by prefers-reduced-motion. */
+:root {
+  --shadow-sm: 0 1px 2px rgba(11, 31, 41, 0.05), 0 1px 1px rgba(11, 31, 41, 0.03);
+  --shadow-md: 0 8px 24px -8px rgba(11, 31, 41, 0.16), 0 2px 6px rgba(11, 31, 41, 0.05);
+  --ease: cubic-bezier(0.22, 0.8, 0.26, 1);
+}
+body {
+  background:
+    radial-gradient(900px 420px at 100% -80px, rgba(0, 230, 118, 0.1), transparent 60%),
+    var(--paper);
+}
+main {
+  scroll-behavior: smooth;
+}
+.card {
+  box-shadow: var(--shadow-sm);
+  border-radius: 16px;
+  transition:
+    transform 0.25s var(--ease),
+    box-shadow 0.25s var(--ease),
+    border-color 0.25s var(--ease);
+}
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: #bfe3d0;
+  }
+}
+.card.stat {
+  position: relative;
+  overflow: hidden;
+}
+.card.stat::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, var(--green), var(--green-deep));
+}
+[dir='rtl'] .card.stat::before {
+  border-radius: 4px 0 0 4px;
+}
+.stat-value {
+  font-size: 1.7rem;
+  font-weight: 750;
+}
+button,
+.btn {
+  transition:
+    transform 0.15s var(--ease),
+    box-shadow 0.2s var(--ease),
+    background-color 0.2s var(--ease);
+}
+button:not(:disabled):active,
+.btn:active {
+  transform: scale(0.97);
+}
+button.primary,
+.btn.primary {
+  box-shadow: 0 6px 16px -6px rgba(0, 230, 118, 0.6);
+}
+button.primary:hover,
+.btn.primary:hover {
+  box-shadow: 0 10px 22px -8px rgba(0, 230, 118, 0.75);
+}
+.side a {
+  transition:
+    background-color 0.2s var(--ease),
+    color 0.2s var(--ease),
+    padding-inline-start 0.2s var(--ease);
+}
+.side a:hover {
+  padding-inline-start: 16px;
+}
+input,
+select,
+textarea {
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--green);
+  box-shadow: var(--focus);
+  outline: none;
+}
+
+/* Page + card entrance */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page > * {
+  animation: rise 0.5s var(--ease) both;
+}
+.page .grid > *,
+.page .tips li,
+.page .rank li,
+.page .cat-list li {
+  animation: rise 0.55s var(--ease) both;
+}
+.page .grid > :nth-child(1) {
+  animation-delay: 0.04s;
+}
+.page .grid > :nth-child(2) {
+  animation-delay: 0.1s;
+}
+.page .grid > :nth-child(3) {
+  animation-delay: 0.16s;
+}
+.page .grid > :nth-child(4) {
+  animation-delay: 0.22s;
+}
+.page .rank li:nth-child(n),
+.page .cat-list li:nth-child(n),
+.page .tips li:nth-child(n) {
+  animation-delay: calc(0.08s * var(--n, 1));
+}
+.page .rank li:nth-child(1),
+.page .cat-list li:nth-child(1),
+.page .tips li:nth-child(1) {
+  --n: 1;
+}
+.page .rank li:nth-child(2),
+.page .cat-list li:nth-child(2),
+.page .tips li:nth-child(2) {
+  --n: 2;
+}
+.page .rank li:nth-child(3),
+.page .cat-list li:nth-child(3),
+.page .tips li:nth-child(3) {
+  --n: 3;
+}
+.page .rank li:nth-child(4),
+.page .cat-list li:nth-child(4),
+.page .tips li:nth-child(4) {
+  --n: 4;
+}
+.page .rank li:nth-child(n + 5),
+.page .cat-list li:nth-child(n + 5),
+.page .tips li:nth-child(n + 5) {
+  --n: 5;
+}
+.meter > div {
+  transform-origin: left center;
+  animation: grow-x 0.9s var(--ease) 0.25s both;
+}
+[dir='rtl'] .meter > div {
+  transform-origin: right center;
+}
+.wd-bar > div {
+  transform-origin: bottom;
+  animation: grow-y 0.8s var(--ease) 0.3s both;
+}
+.wd-col.peak .wd-bar > div {
+  filter: saturate(1.2);
+}
+.rank-n {
+  animation: pop 0.5s var(--ease) 0.2s both;
+}
+
+/* Loading skeleton */
+.skeleton {
+  display: grid;
+  gap: 16px;
+}
+.sk {
+  border-radius: 16px;
+  background: linear-gradient(90deg, #e6f1ea 25%, #f4faf6 37%, #e6f1ea 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+.sk-title {
+  height: 30px;
+  width: 220px;
+}
+.sk-card {
+  height: 96px;
+}
+.sk-block {
+  height: 260px;
+}
+
+/* Category by month */
+.cm-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--mint);
+  color: var(--green-deep);
+  font-weight: 600;
+}
+.cm-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.cm-legend {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.cm-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cm-rows {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.cm-rows li {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) minmax(130px, 220px);
+  align-items: center;
+  gap: 12px;
+}
+.cm-track {
+  height: 26px;
+  background: #eef5f1;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.cm-bar {
+  height: 100%;
+  display: flex;
+  gap: 2px;
+  transform-origin: left center;
+  animation: grow-x 0.9s var(--ease) calc(0.12s * var(--i, 0) + 0.2s) both;
+}
+[dir='rtl'] .cm-bar {
+  transform-origin: right center;
+}
+.cm-bar > span {
+  min-width: 2px;
+  transition: filter 0.2s;
+}
+.cm-bar > span:hover {
+  filter: brightness(1.12);
+}
+.cm-top {
+  line-height: 1.25;
+}
+@media (max-width: 640px) {
+  .cm-rows li {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .cm-top {
+    grid-column: 1 / -1;
+    padding-inline-start: 76px;
+    margin-top: -6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

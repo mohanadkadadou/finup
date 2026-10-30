@@ -171,3 +171,18 @@ export function CategoryBars({
     </ul>
   );
 }
+
+/** Placeholder shown while a page loads; keeps the layout stable instead of flashing text. */
+export function Skeleton() {
+  return (
+    <div className="skeleton" role="status" aria-busy="true">
+      <div className="sk sk-title" />
+      <div className="grid g4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="sk sk-card" />
+        ))}
+      </div>
+      <div className="sk sk-block" />
+    </div>
+  );
+}

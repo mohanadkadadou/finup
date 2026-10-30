@@ -436,6 +436,11 @@ export const AR: Record<string, string> = {
   'We emailed you a 6-digit sign-in code. It is valid for 10 minutes.':
     'أرسلنا لك رمز دخول من 6 أرقام إلى بريدك. صالح لمدة 10 دقائق.',
   'Sign-in code': 'رمز الدخول',
+  'Where most of your money went, month by month': 'وين راحت أكثر فلوسك، شهر بشهر',
+  '{category} was your biggest expense in {n} of {total} months ({amount} in total).':
+    '{category} كانت أكبر مصروف لك في {n} من أصل {total} أشهر (المجموع {amount}).',
+  'Each bar is a month of spending, split by category. The label shows that month’s biggest category.':
+    'كل شريط هو صرف شهر، مقسّم حسب الفئة. والنص يبيّن أكبر فئة في ذلك الشهر.',
   'Email report': 'تقرير بالبريد',
   'Send the latest month summary to your own email address.':
     'أرسل ملخص آخر شهر إلى بريدك الإلكتروني.',

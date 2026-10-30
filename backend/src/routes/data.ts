@@ -16,7 +16,14 @@ import { todayYmd } from '../clock.js';
 import { query } from '../db.js';
 import { ApiError } from '../errors.js';
 import { planGoal } from '../goals.js';
-import { planPurchase, spendByWeekday, topPayees, topSpendDays, wasteTips } from '../insights.js';
+import {
+  categoryByMonth,
+  planPurchase,
+  spendByWeekday,
+  topPayees,
+  topSpendDays,
+  wasteTips,
+} from '../insights.js';
 import { clearDemo, loadDemo } from '../demo.js';
 import { sendMail } from '../mailer.js';
 import { formatMinor } from '../money.js';
@@ -182,6 +189,7 @@ dataRouter.get(
       weekday: spendByWeekday(txs, currency, period),
       top_days: topSpendDays(txs, currency, period),
       tips: wasteTips(txs, currency, month),
+      category_months: categoryByMonth(txs, currency),
       basis: 'actual',
     });
   }),

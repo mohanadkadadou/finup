@@ -362,3 +362,68 @@ export function planPurchase(
     basis: 'estimated',
   };
 }
+
+export interface CategoryMonth {
+  month: string;
+  total_minor: number;
+  top: { category: string; total_minor: number; share_bp: number } | null;
+  categories: { category: string; total_minor: number }[];
+}
+export interface CategoryMonths {
+  months: CategoryMonth[];
+  /** The category that was the biggest expense in the most months (ties: larger overall total). */
+  leader: { category: string; months_led: number; total_minor: number } | null;
+  overall: { category: string; total_minor: number; share_bp: number }[];
+}
+
+/** Expenses per category for each of the last `limit` months with data, plus which category led most often. */
+export function categoryByMonth(all: Tx[], currency: string, limit = 6): CategoryMonths {
+  const txs = expenseTxs(all, currency, null);
+  const allMonths = [...new Set(txs.map((t) => monthOf(t.booked_on)))].sort().slice(-limit);
+  const overallMap = new Map<string, number>();
+  const months: CategoryMonth[] = allMonths.map((month) => {
+    const per = new Map<string, number>();
+    for (const t of txs) {
+      if (monthOf(t.booked_on) !== month) continue;
+      per.set(t.category, (per.get(t.category) ?? 0) + -t.amount_minor);
+      overallMap.set(t.category, (overallMap.get(t.category) ?? 0) + -t.amount_minor);
+    }
+    const categories = [...per.entries()]
+      .map(([category, total_minor]) => ({ category, total_minor }))
+      .sort((a, b) => b.total_minor - a.total_minor || a.category.localeCompare(b.category));
+    const total = categories.reduce((a, c) => a + c.total_minor, 0);
+    const first = categories[0];
+    return {
+      month,
+      total_minor: total,
+      top: first
+        ? {
+            category: first.category,
+            total_minor: first.total_minor,
+            share_bp: Math.round((first.total_minor * 10000) / total),
+          }
+        : null,
+      categories,
+    };
+  });
+  const grand = [...overallMap.values()].reduce((a, n) => a + n, 0);
+  const overall = [...overallMap.entries()]
+    .map(([category, total_minor]) => ({
+      category,
+      total_minor,
+      share_bp: grand ? Math.round((total_minor * 10000) / grand) : 0,
+    }))
+    .sort((a, b) => b.total_minor - a.total_minor || a.category.localeCompare(b.category));
+  const led = new Map<string, number>();
+  for (const m of months) if (m.top) led.set(m.top.category, (led.get(m.top.category) ?? 0) + 1);
+  const winner = [...led.entries()].sort(
+    (a, b) => b[1] - a[1] || (overallMap.get(b[0]) ?? 0) - (overallMap.get(a[0]) ?? 0),
+  )[0];
+  return {
+    months,
+    leader: winner
+      ? { category: winner[0], months_led: winner[1], total_minor: overallMap.get(winner[0]) ?? 0 }
+      : null,
+    overall,
+  };
+}
