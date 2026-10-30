@@ -2,16 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Ctx } from '../App';
 import { api, errMsg } from '../api';
+import { Icon } from '../components/Icon';
 import {
   Alert,
-  CategoryBars,
+  CountUp,
+  Donut,
   Empty,
   PageHeader,
-  Stat,
-  TrendChart,
+  Ring,
   Skeleton,
+  TrendChart,
 } from '../components/ui';
-import { fmt, monthLabel, pct } from '../format';
+import { fmt, monthLabel } from '../format';
 import { tr } from '../serverText';
 import { useT } from '../i18n';
 
@@ -151,38 +153,41 @@ export function DashboardPage({ ctx }: { ctx: Ctx }) {
         <Pickers a={a} />
       </PageHeader>
       {d.note && <Alert kind="info">{tr(d.note)}</Alert>}
-      <div className="grid g4">
-        <Stat
-          label={t('Income')}
-          value={fmt(s.income_minor, d.currency)}
-          sub={d.currency}
-          tone="pos"
-        />
-        <Stat
-          label={t('Expenses')}
-          value={fmt(s.expenses_minor, d.currency)}
-          sub={
-            delta === null
-              ? t('No previous month to compare')
-              : t('{delta}% vs previous month', { delta: `${delta > 0 ? '+' : ''}${delta}` })
-          }
-        />
-        <Stat
-          label={t('Net cash flow')}
-          value={fmt(s.net_minor, d.currency)}
-          sub={t('{n} transactions', { n: s.transaction_count })}
-          tone={s.net_minor < 0 ? 'neg' : 'pos'}
-        />
-        <Stat
-          label={t('Savings rate')}
-          value={pct(s.savings_rate_bp)}
-          sub={
-            s.savings_rate_bp === null
-              ? t('No income recorded this month')
-              : t('Share of income kept')
-          }
-        />
-      </div>
+      <section className="hero">
+        <div className="hero-main">
+          <span className="hero-label">{t('Net cash flow')}</span>
+          <div className="hero-value num">
+            <CountUp minor={s.net_minor} currency={d.currency} /> <small>{d.currency}</small>
+          </div>
+          <span className="hero-sub">{t('{n} transactions', { n: s.transaction_count })}</span>
+        </div>
+        <div className="hero-pills">
+          <div className="pill in">
+            <Icon name="down" size={18} />
+            <div>
+              <span>{t('Income')}</span>
+              <b className="num">
+                <CountUp minor={s.income_minor} currency={d.currency} />
+              </b>
+            </div>
+          </div>
+          <div className="pill out">
+            <Icon name="up" size={18} />
+            <div>
+              <span>{t('Expenses')}</span>
+              <b className="num">
+                <CountUp minor={s.expenses_minor} currency={d.currency} />
+              </b>
+              <em>
+                {delta === null
+                  ? t('No previous month to compare')
+                  : t('{delta}% vs previous month', { delta: `${delta > 0 ? '+' : ''}${delta}` })}
+              </em>
+            </div>
+          </div>
+        </div>
+        <Ring bp={s.savings_rate_bp} label={t('Savings rate')} />
+      </section>
       <div className="grid g3 mt">
         <section className="card">
           <h2>{t('Income vs expenses')}</h2>
@@ -190,7 +195,7 @@ export function DashboardPage({ ctx }: { ctx: Ctx }) {
         </section>
         <section className="card">
           <h2>{t('Where the money went')}</h2>
-          <CategoryBars rows={s.by_category.slice(0, 7)} currency={d.currency} />
+          <Donut rows={s.by_category} currency={d.currency} total={s.expenses_minor} />
         </section>
       </div>
       <div className="grid g2 mt">

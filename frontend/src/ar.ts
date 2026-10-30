@@ -436,6 +436,7 @@ export const AR: Record<string, string> = {
   'We emailed you a 6-digit sign-in code. It is valid for 10 minutes.':
     'أرسلنا لك رمز دخول من 6 أرقام إلى بريدك. صالح لمدة 10 دقائق.',
   'Sign-in code': 'رمز الدخول',
+  Other: 'أخرى',
   'Where most of your money went, month by month': 'وين راحت أكثر فلوسك، شهر بشهر',
   '{category} was your biggest expense in {n} of {total} months ({amount} in total).':
     '{category} كانت أكبر مصروف لك في {n} من أصل {total} أشهر (المجموع {amount}).',

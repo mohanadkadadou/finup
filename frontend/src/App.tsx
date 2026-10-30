@@ -28,18 +28,18 @@ export interface Ctx {
   signOut: () => Promise<void>;
 }
 
-const NAV: [string, string][] = [
-  ['/', 'Dashboard'],
-  ['/transactions', 'Transactions'],
-  ['/import', 'Import'],
-  ['/insights', 'Insights'],
-  ['/analytics', 'Analytics'],
-  ['/planner', 'Purchase planner'],
-  ['/budgets', 'Budgets'],
-  ['/goals', 'Savings goals'],
-  ['/assistant', 'Assistant'],
-  ['/accounts', 'Connected accounts'],
-  ['/settings', 'Settings & privacy'],
+const NAV: [string, string, string][] = [
+  ['/', 'Dashboard', 'home'],
+  ['/transactions', 'Transactions', 'list'],
+  ['/import', 'Import', 'upload'],
+  ['/insights', 'Insights', 'insights'],
+  ['/analytics', 'Analytics', 'analytics'],
+  ['/planner', 'Purchase planner', 'planner'],
+  ['/budgets', 'Budgets', 'budgets'],
+  ['/goals', 'Savings goals', 'goals'],
+  ['/assistant', 'Assistant', 'assistant'],
+  ['/accounts', 'Connected accounts', 'accounts'],
+  ['/settings', 'Settings & privacy', 'settings'],
 ];
 
 const TABS: [string, string, string][] = [
@@ -58,9 +58,10 @@ function MorePage({ ctx }: { ctx: Ctx }) {
         <h1>{t('More')}</h1>
       </header>
       <div className="card more-list">
-        {NAV.filter(([to]) => !TABS.some(([x]) => x === to)).map(([to, label]) => (
+        {NAV.filter(([to]) => !TABS.some(([x]) => x === to)).map(([to, label, icon]) => (
           <NavLink key={to} to={to}>
-            {t(label)}
+            <Icon name={icon} size={20} />
+            <span>{t(label)}</span>
           </NavLink>
         ))}
         <LangSwitch className="lang-switch wide" />
@@ -126,14 +127,15 @@ export function App() {
           <br />
           {t('Brighter tomorrow')}
         </div>
-        {NAV.map(([to, label]) => (
+        {NAV.map(([to, label, icon]) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) => (isActive ? 'active' : '')}
           >
-            {t(label)}
+            <Icon name={icon} size={18} />
+            <span>{t(label)}</span>
           </NavLink>
         ))}
         <div className="spacer" />

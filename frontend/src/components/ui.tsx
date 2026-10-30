@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { fmt, monthLabel } from '../format';
 import { useT } from '../i18n';
 
@@ -106,6 +106,26 @@ export function TrendChart({ data, currency }: { data: Point[]; currency: string
         aria-label={t('Monthly income and expenses in {currency}', { currency })}
       >
         <title>{t('Monthly income and expenses in {currency}', { currency })}</title>
+        <defs>
+          <linearGradient id="g-in" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#00e676" />
+            <stop offset="100%" stopColor="#00b35c" />
+          </linearGradient>
+          <linearGradient id="g-out" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#1b6b57" />
+            <stop offset="100%" stopColor="#0f4d3e" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75, 1].map((f) => (
+          <line
+            key={f}
+            x1={pad}
+            x2={W - pad}
+            y1={H - f * (H - 14)}
+            y2={H - f * (H - 14)}
+            className="gridline"
+          />
+        ))}
         <line x1={pad} x2={W - pad} y1={H} y2={H} className="axis" />
         {data.map((d, i) => {
           const x = pad + i * step + step / 2;
@@ -113,10 +133,26 @@ export function TrendChart({ data, currency }: { data: Point[]; currency: string
           const he = (d.expenses_minor / max) * (H - 14);
           return (
             <g key={d.month}>
-              <rect x={x - bw - 1} y={H - hi} width={bw} height={hi} rx={2} className="bar-in">
+              <rect
+                x={x - bw - 1}
+                y={H - hi}
+                width={bw}
+                height={hi}
+                rx={5}
+                className="bar-in"
+                style={{ animationDelay: `${i * 0.06}s` }}
+              >
                 <title>{`${monthLabel(d.month)} ${t('Income')} ${fmt(d.income_minor, currency)}`}</title>
               </rect>
-              <rect x={x + 1} y={H - he} width={bw} height={he} rx={2} className="bar-out">
+              <rect
+                x={x + 1}
+                y={H - he}
+                width={bw}
+                height={he}
+                rx={5}
+                className="bar-out"
+                style={{ animationDelay: `${i * 0.06 + 0.04}s` }}
+              >
                 <title>{`${monthLabel(d.month)} ${t('Expenses')} ${fmt(d.expenses_minor, currency)}`}</title>
               </rect>
               <text x={x} y={H + 16} textAnchor="middle" className="tick">
@@ -183,6 +219,132 @@ export function Skeleton() {
         ))}
       </div>
       <div className="sk sk-block" />
+    </div>
+  );
+}
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Counts a money amount up from zero. The final frame is always the exact value. */
+export function CountUp({ minor, currency }: { minor: number; currency: string }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (reducedMotion()) {
+      setV(minor);
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / 900);
+      setV(p >= 1 ? minor : Math.round(minor * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [minor]);
+  return <>{fmt(v, currency)}</>;
+}
+
+export const CAT_COLORS = ['#00c26a', '#0f4d3e', '#2f80ed', '#f2994a', '#9b51e0', '#eb5757'];
+export const CAT_OTHER = '#9aa5ad';
+
+/** Spending split as a donut with a legend. Rows beyond the palette are grouped as "Other". */
+export function Donut({
+  rows,
+  currency,
+  total,
+}: {
+  rows: { category: string; total_minor: number; share_bp: number }[];
+  currency: string;
+  total: number;
+}) {
+  const { t } = useT();
+  if (rows.length === 0 || total <= 0)
+    return <p className="muted">{t('No expenses in this period.')}</p>;
+  const shown = rows.slice(0, CAT_COLORS.length);
+  const rest = rows.slice(CAT_COLORS.length).reduce((a, r) => a + r.total_minor, 0);
+  const parts = [
+    ...shown.map((r, i) => ({
+      key: r.category,
+      label: t(r.category),
+      minor: r.total_minor,
+      color: CAT_COLORS[i]!,
+    })),
+    ...(rest > 0 ? [{ key: '_o', label: t('Other'), minor: rest, color: CAT_OTHER }] : []),
+  ];
+  const R = 44;
+  const C = 2 * Math.PI * R;
+  let acc = 0;
+  return (
+    <div className="donut">
+      <div className="donut-ring">
+        <svg viewBox="0 0 120 120" role="img" aria-label={t('Where the money went')}>
+          <circle cx="60" cy="60" r={R} className="donut-bg" />
+          {parts.map((p, i) => {
+            const len = (p.minor / total) * C;
+            const off = -acc;
+            acc += len;
+            return (
+              <circle
+                key={p.key}
+                cx="60"
+                cy="60"
+                r={R}
+                className="donut-seg"
+                stroke={p.color}
+                strokeDasharray={`${Math.max(0, len - 1.5)} ${C}`}
+                strokeDashoffset={off}
+                style={{ animationDelay: `${0.15 + i * 0.1}s` }}
+              >
+                <title>{`${p.label}: ${fmt(p.minor, currency)}`}</title>
+              </circle>
+            );
+          })}
+        </svg>
+        <div className="donut-center">
+          <span className="small muted">{t('Expenses')}</span>
+          <strong className="num">
+            <CountUp minor={total} currency={currency} />
+          </strong>
+          <span className="small muted">{currency}</span>
+        </div>
+      </div>
+      <ul className="donut-legend">
+        {parts.map((p) => (
+          <li key={p.key}>
+            <i style={{ background: p.color }} />
+            <span>{p.label}</span>
+            <span className="num muted small">{((p.minor / total) * 100).toFixed(0)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Ring showing a percentage (basis points), e.g. savings rate. */
+export function Ring({ bp, label }: { bp: number | null; label: string }) {
+  const R = 34;
+  const C = 2 * Math.PI * R;
+  const clamped = bp === null ? 0 : Math.max(0, Math.min(10000, bp));
+  return (
+    <div className="ring">
+      <svg viewBox="0 0 84 84" aria-hidden="true">
+        <circle cx="42" cy="42" r={R} className="ring-bg" />
+        <circle
+          cx="42"
+          cy="42"
+          r={R}
+          className="ring-fg"
+          strokeDasharray={`${(clamped / 10000) * C} ${C}`}
+        />
+      </svg>
+      <div className="ring-txt">
+        <strong className="num">{bp === null ? '—' : `${(bp / 100).toFixed(0)}%`}</strong>
+        <span>{label}</span>
+      </div>
     </div>
   );
 }
