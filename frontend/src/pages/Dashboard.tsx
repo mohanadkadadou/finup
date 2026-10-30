@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import {
   Alert,
   CountUp,
+  DashboardFacts,
   Donut,
   Empty,
   PageHeader,
@@ -188,6 +189,9 @@ export function DashboardPage({ ctx }: { ctx: Ctx }) {
         </div>
         <Ring bp={s.savings_rate_bp} label={t('Savings rate')} />
       </section>
+      <div className="mt">
+        <DashboardFacts month={d.month} currency={d.currency} />
+      </div>
       <div className="grid g3 mt">
         <section className="card">
           <h2>{t('Income vs expenses')}</h2>

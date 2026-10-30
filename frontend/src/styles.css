@@ -1739,3 +1739,64 @@ main {
   background: var(--mint);
   animation: rise 0.35s var(--ease) both;
 }
+
+/* Facts card */
+.facts {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(320px 140px at 100% 0%, rgba(0, 230, 118, 0.16), transparent 70%), #fff;
+}
+.facts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.facts-tag {
+  font-weight: 750;
+  color: var(--green-deep);
+  background: var(--mint);
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.82rem;
+}
+.facts-next {
+  font-size: 0.82rem;
+  padding: 5px 12px;
+}
+.facts-text {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 1.12rem;
+  font-weight: 650;
+  line-height: 1.5;
+  min-height: 3.4em;
+  margin: 4px 0 12px;
+  animation: rise 0.45s var(--ease) both;
+}
+[dir='rtl'] .facts-text {
+  font-family: 'Cairo', sans-serif;
+}
+.facts-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.facts-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  min-height: 0;
+  border-radius: 99px;
+  border: 0;
+  background: #cfe3d8;
+  box-shadow: none;
+  transition:
+    width 0.25s var(--ease),
+    background-color 0.25s;
+}
+.facts-dots button.on {
+  width: 22px;
+  background: var(--green);
+}

@@ -427,3 +427,93 @@ export function categoryByMonth(all: Tx[], currency: string, limit = 6): Categor
     overall,
   };
 }
+
+export interface SpendingFact {
+  id: string;
+  kind: string;
+  params: Record<string, string | number>;
+}
+
+/**
+ * Plain observations about where a month's money went. Every number is counted or summed from the
+ * user's confirmed transactions; nothing is forecast. Facts that cannot be computed are omitted.
+ */
+export function spendingFacts(all: Tx[], currency: string, month: string): SpendingFact[] {
+  const period = monthPeriod(month);
+  const txs = expenseTxs(all, currency, period);
+  if (txs.length === 0) return [];
+  const facts: SpendingFact[] = [];
+  const add = (kind: string, params: SpendingFact['params']) =>
+    facts.push({ id: kind, kind, params });
+  const total = txs.reduce((a, t) => a + -t.amount_minor, 0);
+
+  const biggest = txs.reduce((a, t) => (t.amount_minor < a.amount_minor ? t : a));
+  add('biggest_purchase', {
+    label: biggest.description,
+    amount_minor: -biggest.amount_minor,
+    date: biggest.booked_on,
+    share_pct: Math.round((-biggest.amount_minor * 100) / total),
+  });
+
+  const payees = topPayees(all, currency, period, 100);
+  const frequent = [...payees].sort(
+    (a, b) => b.count - a.count || b.total_minor - a.total_minor,
+  )[0];
+  if (frequent && frequent.count >= 2)
+    add('most_frequent', {
+      label: frequent.label,
+      count: frequent.count,
+      total_minor: frequent.total_minor,
+    });
+  add('distinct_payees', { count: payees.length, tx_count: txs.length });
+  if (payees.length >= 3) {
+    const top3 = payees.slice(0, 3).reduce((a, p) => a + p.total_minor, 0);
+    add('top3_share', { pct: Math.round((top3 * 100) / total) });
+  }
+
+  const dates = txs.map((t) => t.booked_on).sort();
+  const first = period.from;
+  const last = dates[dates.length - 1]!;
+  const spendDays = new Set(dates);
+  let days = 0;
+  for (let d = first; d <= last; d = nextDay(d)) days += 1;
+  add('avg_daily', { amount_minor: Math.round(total / days), days });
+  if (days > spendDays.size) add('no_spend_days', { count: days - spendDays.size, days });
+
+  const weekend = txs
+    .filter((t) => dow(t.booked_on) === 0 || dow(t.booked_on) === 6)
+    .reduce((a, t) => a + -t.amount_minor, 0);
+  add('weekend_share', { pct: Math.round((weekend * 100) / total) });
+
+  add('avg_purchase', { amount_minor: Math.round(total / txs.length), count: txs.length });
+
+  const byCat = new Map<string, { total: number; count: number }>();
+  for (const t of txs) {
+    const c = byCat.get(t.category) ?? { total: 0, count: 0 };
+    c.total += -t.amount_minor;
+    c.count += 1;
+    byCat.set(t.category, c);
+  }
+  const topCat = [...byCat.entries()].sort((a, b) => b[1].total - a[1].total)[0]!;
+  add('category_per_day', {
+    category: topCat[0],
+    amount_minor: Math.round(topCat[1].total / days),
+  });
+  const busiest = [...byCat.entries()].sort((a, b) => b[1].count - a[1].count)[0]!;
+  if (busiest[1].count >= 3 && busiest[0] !== topCat[0])
+    add('most_transactions_category', { category: busiest[0], count: busiest[1].count });
+
+  const prev = new Map<string, number>();
+  for (const t of expenseTxs(all, currency, monthPeriod(addMonths(month, -1))))
+    prev.set(t.category, (prev.get(t.category) ?? 0) + -t.amount_minor);
+  const rise = [...byCat.entries()]
+    .map(([category, c]) => ({
+      category,
+      delta: c.total - (prev.get(category) ?? 0),
+      had: prev.has(category),
+    }))
+    .filter((r) => r.had && r.delta > 0)
+    .sort((a, b) => b.delta - a.delta)[0];
+  if (rise) add('biggest_rise', { category: rise.category, delta_minor: rise.delta });
+  return facts;
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { fmt, monthLabel } from '../format';
+import { api } from '../api';
+import { dayLabel, fmt, monthLabel } from '../format';
 import { useT } from '../i18n';
 
 export function PageHeader({
@@ -347,4 +348,102 @@ export function Ring({ bp, label }: { bp: number | null; label: string }) {
       </div>
     </div>
   );
+}
+
+export interface Fact {
+  id: string;
+  kind: string;
+  params: Record<string, string | number>;
+}
+
+const FACT_TEXT: Record<string, string> = {
+  biggest_purchase:
+    'Your biggest single purchase was {label} for {amount} on {date}: {share_pct}% of everything you spent.',
+  most_frequent: 'You paid {label} {count} times, {total} in total.',
+  distinct_payees: 'Your money went to {count} different places across {tx_count} payments.',
+  top3_share: 'Just 3 places took {pct}% of your spending.',
+  avg_daily: 'You spent about {amount} per day over {days} days.',
+  no_spend_days: '{count} of {days} days had no spending at all.',
+  weekend_share: '{pct}% of your spending happened on weekends.',
+  avg_purchase: 'The average payment was {amount} across {count} payments.',
+  category_per_day: '{category} costs you about {amount} every day.',
+  most_transactions_category: '{category} had the most payments: {count}.',
+  biggest_rise: '{category} grew the most versus last month: +{delta}.',
+};
+
+/** Rotating "did you know" facts about where the money went. Facts are computed on the server from real rows. */
+export function FactsCard({ facts, currency }: { facts: Fact[]; currency: string }) {
+  const { t } = useT();
+  const [i, setI] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const n = facts.length;
+  useEffect(() => {
+    if (paused || n < 2 || reducedMotion()) return;
+    const id = setInterval(() => setI((x) => (x + 1) % n), 7000);
+    return () => clearInterval(id);
+  }, [paused, n]);
+  if (n === 0) return null;
+  const f = facts[i % n]!;
+  const money = (v: number) => `\u2066${fmt(v, currency)} ${currency}\u2069`;
+  const v: Record<string, string | number> = {};
+  for (const [k, val] of Object.entries(f.params)) {
+    if (k.endsWith('_minor')) v[k.slice(0, -6)] = money(Number(val));
+    else if (k === 'category') v[k] = t(String(val));
+    else if (k === 'date') v[k] = dayLabel(String(val));
+    else v[k] = val;
+  }
+  const shuffle = () => {
+    setPaused(true);
+    setI((x) => {
+      if (n < 2) return x;
+      let r = x;
+      while (r === x) r = Math.floor(Math.random() * n);
+      return r;
+    });
+  };
+  return (
+    <section className="card facts" aria-live="polite">
+      <div className="facts-head">
+        <span className="facts-tag">{t('Did you know?')}</span>
+        <button type="button" className="facts-next" onClick={shuffle}>
+          {t('Another fact')}
+        </button>
+      </div>
+      <p key={f.id} className="facts-text">
+        {t(FACT_TEXT[f.kind] ?? f.kind, v)}
+      </p>
+      <div className="facts-dots" role="tablist" aria-label={t('Facts')}>
+        {facts.map((x, idx) => (
+          <button
+            key={x.id}
+            type="button"
+            role="tab"
+            aria-selected={idx === i % n}
+            aria-label={`${idx + 1}`}
+            className={idx === i % n ? 'on' : ''}
+            onClick={() => {
+              setPaused(true);
+              setI(idx);
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Fetches the month's facts for the dashboard. Silent when unavailable. */
+export function DashboardFacts({ month, currency }: { month: string; currency: string }) {
+  const [facts, setFacts] = useState<Fact[]>([]);
+  useEffect(() => {
+    let live = true;
+    api
+      .get<{ facts?: Fact[] }>(`/insights?month=${month}&currency=${currency}`)
+      .then((r) => live && setFacts(r.facts ?? []))
+      .catch(() => live && setFacts([]));
+    return () => {
+      live = false;
+    };
+  }, [month, currency]);
+  return <FactsCard facts={facts} currency={currency} />;
 }

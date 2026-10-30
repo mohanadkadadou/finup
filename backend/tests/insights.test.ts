@@ -4,6 +4,7 @@ import {
   categoryByMonth,
   planPurchase,
   spendByWeekday,
+  spendingFacts,
   topPayees,
   topSpendDays,
   wasteTips,
@@ -131,5 +132,34 @@ describe('categoryByMonth', () => {
   });
   it('is empty without expenses', () => {
     expect(categoryByMonth([], 'TRY')).toEqual({ months: [], leader: null, overall: [] });
+  });
+});
+
+describe('spendingFacts', () => {
+  const facts = spendingFacts(data, 'TRY', '2026-10');
+  const get = (k: string) => facts.find((f) => f.kind === k)?.params;
+
+  it('finds the biggest purchase and the most frequent payee from real rows', () => {
+    expect(get('biggest_purchase')).toMatchObject({ label: 'Rent', amount_minor: 400000 });
+    expect(get('most_frequent')).toMatchObject({
+      label: 'Cafe Nero',
+      count: 2,
+      total_minor: 12000,
+    });
+  });
+  it('averages per calendar day up to the last spending day and counts quiet days', () => {
+    // Expenses 4000 + 80 + 40 + 1500 = 5620 TL over Oct 1..10 (10 days), spending on 3 distinct days.
+    expect(get('avg_daily')).toEqual({ amount_minor: 56200, days: 10 });
+    expect(get('no_spend_days')).toEqual({ count: 7, days: 10 });
+  });
+  it('shares add up from counted amounts and exclude other currencies', () => {
+    expect(get('avg_purchase')).toEqual({ amount_minor: Math.round(562000 / 4), count: 4 });
+    expect(get('distinct_payees')).toEqual({ count: 3, tx_count: 4 });
+  });
+  it('compares a category with last month only when both months have it', () => {
+    expect(get('biggest_rise')).toMatchObject({ category: 'Dining', delta_minor: 7000 });
+  });
+  it('is empty for a month without expenses', () => {
+    expect(spendingFacts(data, 'TRY', '2025-01')).toEqual([]);
   });
 });

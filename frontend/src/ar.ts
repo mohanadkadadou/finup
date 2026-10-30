@@ -437,6 +437,26 @@ export const AR: Record<string, string> = {
     'أرسلنا لك رمز دخول من 6 أرقام إلى بريدك. صالح لمدة 10 دقائق.',
   'Sign-in code': 'رمز الدخول',
   Other: 'أخرى',
+  'Did you know?': 'هل تعلم؟',
+  'Another fact': 'معلومة ثانية',
+  Facts: 'معلومات',
+  'Your biggest single purchase was {label} for {amount} on {date}: {share_pct}% of everything you spent.':
+    'أكبر عملية شراء لك كانت {label} بمبلغ {amount} بتاريخ {date}: أي {share_pct}% من كل ما صرفته.',
+  'You paid {label} {count} times, {total} in total.':
+    'دفعت لـ {label} {count} مرات، بمجموع {total}.',
+  'Your money went to {count} different places across {tx_count} payments.':
+    'فلوسك راحت إلى {count} جهات مختلفة عبر {tx_count} دفعة.',
+  'Just 3 places took {pct}% of your spending.': 'ثلاث جهات فقط أخذت {pct}% من مصروفك.',
+  'You spent about {amount} per day over {days} days.':
+    'صرفت حوالي {amount} باليوم خلال {days} يوماً.',
+  '{count} of {days} days had no spending at all.': '{count} من أصل {days} يوماً ما صرفت فيها شي.',
+  '{pct}% of your spending happened on weekends.': '{pct}% من مصروفك صار بعطلة نهاية الأسبوع.',
+  'The average payment was {amount} across {count} payments.':
+    'متوسط الدفعة كان {amount} عبر {count} دفعة.',
+  '{category} costs you about {amount} every day.': '{category} تكلّفك حوالي {amount} كل يوم.',
+  '{category} had the most payments: {count}.': '{category} كانت الأكثر عدداً بالدفعات: {count}.',
+  '{category} grew the most versus last month: +{delta}.':
+    '{category} ارتفعت أكثر من غيرها عن الشهر الماضي: +{delta}.',
   'Choose your bank in Türkiye': 'اختر بنكك في تركيا',
   '{n} banks': '{n} بنك',
   'Search for a bank': 'ابحث عن بنك',

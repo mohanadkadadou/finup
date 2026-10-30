@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errMsg } from '../api';
-import { Alert, Empty, PageHeader, Stat, Skeleton } from '../components/ui';
+import { Alert, Empty, FactsCard, PageHeader, Skeleton, Stat, type Fact } from '../components/ui';
 import { dayLabel, fmt, monthLabel, weekdayLabel } from '../format';
 import { useT } from '../i18n';
 
@@ -34,6 +34,7 @@ interface InsightsData {
   weekday: { weekday: number; total_minor: number; count: number; avg_per_day_minor: number }[];
   top_days: { date: string; weekday: number; total_minor: number; count: number }[];
   tips: Tip[];
+  facts: Fact[];
   category_months: {
     months: {
       month: string;
@@ -256,6 +257,10 @@ export function InsightsPage() {
           value={weekdayLabel(peakWd.weekday)}
           sub={t('avg {amount} per day', { amount: money(peakWd.avg_per_day_minor) })}
         />
+      </div>
+
+      <div className="mt">
+        <FactsCard facts={data.facts} currency={cur} />
       </div>
 
       <CategoryMonths data={data.category_months} money={money} />

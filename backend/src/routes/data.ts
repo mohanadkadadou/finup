@@ -20,6 +20,7 @@ import {
   categoryByMonth,
   planPurchase,
   spendByWeekday,
+  spendingFacts,
   topPayees,
   topSpendDays,
   wasteTips,
@@ -190,6 +191,7 @@ dataRouter.get(
       top_days: topSpendDays(txs, currency, period),
       tips: wasteTips(txs, currency, month),
       category_months: categoryByMonth(txs, currency),
+      facts: spendingFacts(txs, currency, month),
       basis: 'actual',
     });
   }),
