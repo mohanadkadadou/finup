@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../api';
+import { CategoryChip } from './category';
 import { dayLabel, fmt, monthLabel } from '../format';
 import { useT } from '../i18n';
 
@@ -446,4 +447,47 @@ export function DashboardFacts({ month, currency }: { month: string; currency: s
     };
   }, [month, currency]);
   return <FactsCard facts={facts} currency={currency} />;
+}
+
+interface LatestTx {
+  id: string;
+  booked_on: string;
+  description: string;
+  amount_minor: number;
+  currency: string;
+  category: string;
+}
+
+/** The most recent transactions, each tagged with the category it was spent on. */
+export function LatestTransactions() {
+  const { t } = useT();
+  const [rows, setRows] = useState<LatestTx[]>([]);
+  useEffect(() => {
+    let live = true;
+    api
+      .get<{ transactions: LatestTx[] }>('/transactions?page=1&pageSize=8')
+      .then((r) => live && setRows(r.transactions))
+      .catch(() => live && setRows([]));
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (rows.length === 0) return null;
+  return (
+    <section className="card">
+      <h2>{t('Latest transactions')}</h2>
+      <ul className="latest">
+        {rows.map((r) => (
+          <li key={r.id}>
+            <div className="latest-main">
+              <strong>{r.description}</strong>
+              <span className="muted small">{dayLabel(r.booked_on)}</span>
+            </div>
+            <CategoryChip category={r.category} />
+            <Money minor={r.amount_minor} currency={r.currency} signed />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }

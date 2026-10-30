@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, errMsg } from '../api';
 import { Alert, Badge, Empty, Money, PageHeader } from '../components/ui';
+import { CAT_STYLE, CategoryChip } from '../components/category';
 import { useT } from '../i18n';
 
 export const CATEGORIES = [
@@ -92,22 +93,27 @@ export function TransactionsPage() {
             setPage(1);
           }}
         />
-        <select
-          aria-label={t('Filter by category')}
-          value={category}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="">{t('All categories')}</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {t(c)}
-            </option>
-          ))}
-        </select>
       </PageHeader>
+      <div className="chipbar" role="group" aria-label={t('Filter by category')}>
+        {['', ...CATEGORIES].map((c) => (
+          <button
+            key={c || 'all'}
+            type="button"
+            className={`chipbtn${category === c ? ' on' : ''}`}
+            style={
+              c
+                ? { ['--c' as string]: (CAT_STYLE[c] ?? CAT_STYLE.Uncategorized!).color }
+                : undefined
+            }
+            onClick={() => {
+              setCategory(c);
+              setPage(1);
+            }}
+          >
+            {c ? `${(CAT_STYLE[c] ?? CAT_STYLE.Uncategorized!).icon} ${t(c)}` : t('All categories')}
+          </button>
+        ))}
+      </div>
       {err && <Alert>{err}</Alert>}
       {rows.length === 0 && !err ? (
         <Empty title={t('Nothing to show')}>
@@ -135,17 +141,20 @@ export function TransactionsPage() {
                       <div className="muted small">{tx.account_name}</div>
                     </td>
                     <td>
-                      <select
-                        aria-label={t('Category for {name}', { name: tx.description })}
-                        value={tx.category}
-                        onChange={(e) => void setCat(tx.id, e.target.value)}
-                      >
-                        {CATEGORIES.map((c) => (
-                          <option key={c} value={c}>
-                            {t(c)}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="cat-edit">
+                        <CategoryChip category={tx.category} />
+                        <select
+                          aria-label={t('Category for {name}', { name: tx.description })}
+                          value={tx.category}
+                          onChange={(e) => void setCat(tx.id, e.target.value)}
+                        >
+                          {CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {t(c)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </td>
                     <td className="right">
                       <Money minor={tx.amount_minor} currency={tx.currency} signed />{' '}

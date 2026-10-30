@@ -8,6 +8,7 @@ import {
   CountUp,
   DashboardFacts,
   Donut,
+  LatestTransactions,
   Empty,
   PageHeader,
   Ring,
@@ -201,6 +202,9 @@ export function DashboardPage({ ctx }: { ctx: Ctx }) {
           <h2>{t('Where the money went')}</h2>
           <Donut rows={s.by_category} currency={d.currency} total={s.expenses_minor} />
         </section>
+      </div>
+      <div className="mt">
+        <LatestTransactions />
       </div>
       <div className="grid g2 mt">
         <section className="card">

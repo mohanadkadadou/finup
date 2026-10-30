@@ -437,6 +437,7 @@ export const AR: Record<string, string> = {
     'أرسلنا لك رمز دخول من 6 أرقام إلى بريدك. صالح لمدة 10 دقائق.',
   'Sign-in code': 'رمز الدخول',
   Other: 'أخرى',
+  'Latest transactions': 'آخر المعاملات',
   'Did you know?': 'هل تعلم؟',
   'Another fact': 'معلومة ثانية',
   Facts: 'معلومات',
