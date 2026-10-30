@@ -4,3 +4,4 @@ package-lock.json
 backend/tests/fixtures
 deploy/*.yml
 .github
+render.yaml

@@ -23,3 +23,7 @@ Install needs HTTPS for the real "app" experience and for Secure cookies.
 - **Android:** Chrome → menu → **Install app**.
 
 It then opens full screen without browser chrome.
+
+## One-click on Render
+
+Dashboard → **New → Blueprint** → select this GitHub repo. `render.yaml` creates the web service and a PostgreSQL database. After the first deploy set `APP_URL` to the service's `https://….onrender.com` address, then open it on the phone and install to the home screen. (Free-tier databases expire; use a paid plan for real data.)
