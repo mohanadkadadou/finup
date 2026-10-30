@@ -13,7 +13,7 @@ const lines = [
 describe('PDF statement without a debit/credit column', () => {
   const { grid } = pdfLinesToGrid(lines);
   const guess = guessMapping(grid, 'TRY');
-  const { rows } = stageRows(grid, guess.mapping ?? guess.partial, {
+  const { rows } = stageRows(grid, guess.mapping!, {
     accountId: 'a',
     existingKeys: new Set(),
   });
