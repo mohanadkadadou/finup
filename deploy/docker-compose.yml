@@ -1,0 +1,27 @@
+# Run the whole stack:  docker compose -f deploy/docker-compose.yml up --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: finup
+      POSTGRES_PASSWORD: finup
+      POSTGRES_DB: finup
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U finup']
+      interval: 5s
+      retries: 10
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://finup:finup@db:5432/finup
+      APP_URL: ${APP_URL:-http://localhost:4000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports: ['4000:4000']
+volumes:
+  dbdata:

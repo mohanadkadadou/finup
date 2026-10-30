@@ -1,0 +1,291 @@
+openapi: 3.0.3
+info:
+  title: Finup API
+  version: 0.1.0
+  description: >-
+    Hand-written summary of the implemented API (verify against the code before relying on it). The
+    httpOnly session cookie finup_session authenticates every route except /auth/register,
+    /auth/login and /health. Money is signed integer minor units. Errors use the shape { error: {
+    code, message, details } }.
+servers:
+  - url: http://localhost:4000/api
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: finup_session
+security:
+  - session: []
+paths:
+  /health:
+    get:
+      summary: Liveness
+      responses:
+        '200':
+          description: ok
+      security: []
+  /auth/register:
+    post:
+      summary: Create account (email, password min 10 chars)
+      responses:
+        '201':
+          description: created
+        '400':
+          description: VALIDATION_ERROR
+        '409':
+          description: EMAIL_TAKEN
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                  minLength: 10
+      security: []
+  /auth/login:
+    post:
+      summary: Sign in
+      responses:
+        '200':
+          description: ok
+        '401':
+          description: BAD_CREDENTIALS
+      security: []
+  /auth/logout:
+    post:
+      summary: Sign out
+      responses:
+        '204':
+          description: ok
+  /auth/me:
+    get:
+      summary: Current user and demo-data flag
+      responses:
+        '200':
+          description: ok
+        '401':
+          description: UNAUTHENTICATED
+  /accounts:
+    get:
+      summary: List accounts
+      responses:
+        '200':
+          description: ok
+    post:
+      summary: Create a statement account
+      responses:
+        '201':
+          description: created
+  /imports:
+    get:
+      summary: Recent import batches
+      responses:
+        '200':
+          description: ok
+    post:
+      summary: Upload a statement (multipart field file; optional accountId, currency, accountName)
+      responses:
+        '201':
+          description: Batch in review or needs_mapping
+        '413':
+          description: FILE_TOO_LARGE or TOO_MANY_ROWS
+        '415':
+          description: UNSUPPORTED_FORMAT
+        '422':
+          description: OCR_REQUIRED, PDF_NO_TRANSACTIONS, malformed or empty file
+  /imports/{id}:
+    get:
+      summary: Batch with rows and counts (query offset, limit, status)
+      responses:
+        '200':
+          description: ok
+        '404':
+          description: not found or not yours
+    delete:
+      summary: Discard a batch that is not committed
+      responses:
+        '204':
+          description: ok
+        '409':
+          description: BATCH_CLOSED
+  /imports/{id}/mapping:
+    post:
+      summary: Apply a manual column mapping (headerRow -1 means no header row)
+      responses:
+        '200':
+          description: re-staged batch
+        '400':
+          description: MAPPING_INCOMPLETE or MAPPING_OUT_OF_RANGE
+  /imports/{id}/rows/{rowId}:
+    patch:
+      summary: >-
+        Edit a staged row (bookedOn, description, amount, direction, currency, category, include,
+        confirmed)
+      responses:
+        '200':
+          description: row and counts
+        '400':
+          description: invalid value
+        '404':
+          description: not found
+  /imports/{id}/confirm-flagged:
+    post:
+      summary: Mark flagged rows as reviewed
+      responses:
+        '200':
+          description: counts
+  /imports/{id}/commit:
+    post:
+      summary: Import included rows (body confirmFlagged)
+      responses:
+        '200':
+          description: imported, skipped_duplicates, skipped_invalid, skipped_excluded, flagged_imported
+        '409':
+          description: UNRESOLVED_FLAGGED or BATCH_CLOSED
+  /transactions:
+    get:
+      summary: Paginated list (page, pageSize up to 200, from, to, category, currency, q)
+      responses:
+        '200':
+          description: ok
+  /transactions/{id}:
+    patch:
+      summary: Change category or description
+      responses:
+        '200':
+          description: ok
+        '404':
+          description: not found
+    delete:
+      summary: Delete a transaction
+      responses:
+        '204':
+          description: ok
+        '404':
+          description: not found
+  /analytics:
+    get:
+      summary: Summary, trend, recurring and estimate for one currency and month (query currency, month)
+      responses:
+        '200':
+          description: ok
+  /goals:
+    get:
+      summary: Goals with deterministic plans
+      responses:
+        '200':
+          description: ok
+    post:
+      summary: Create a goal
+      responses:
+        '201':
+          description: created
+        '400':
+          description: VALIDATION_ERROR
+  /goals/{id}:
+    patch:
+      summary: Update a goal
+      responses:
+        '200':
+          description: ok
+        '404':
+          description: not found
+    delete:
+      summary: Delete a goal
+      responses:
+        '204':
+          description: ok
+        '404':
+          description: not found
+  /budgets:
+    get:
+      summary: Budgets with spent amounts for a month
+      responses:
+        '200':
+          description: ok
+    put:
+      summary: Upsert a budget by category and currency
+      responses:
+        '200':
+          description: ok
+  /budgets/{id}:
+    delete:
+      summary: Delete a budget
+      responses:
+        '204':
+          description: ok
+        '404':
+          description: not found
+  /assistant:
+    post:
+      summary: Ask a question; returns mode (llm or fallback), answer, evidence, note
+      responses:
+        '200':
+          description: ok
+        '400':
+          description: VALIDATION_ERROR
+  /assistant/status:
+    get:
+      summary: Whether an AI key is configured
+      responses:
+        '200':
+          description: ok
+  /banks/status:
+    get:
+      summary: Provider configuration status
+      responses:
+        '200':
+          description: ok
+  /banks/connect:
+    post:
+      summary: Start bank consent. Always 409 BANK_NOT_CONFIGURED in this build
+      responses:
+        '409':
+          description: BANK_NOT_CONFIGURED
+  /banks/connections:
+    get:
+      summary: Connections (token never returned)
+      responses:
+        '200':
+          description: ok
+  /banks/connections/{id}:
+    delete:
+      summary: Revoke a connection
+      responses:
+        '204':
+          description: ok
+        '404':
+          description: not found
+  /export:
+    get:
+      summary: Download all of the user's data as JSON
+      responses:
+        '200':
+          description: ok
+  /delete-account:
+    post:
+      summary: Delete the account and all data (body confirmEmail)
+      responses:
+        '204':
+          description: ok
+        '400':
+          description: CONFIRMATION_MISMATCH
+  /demo:
+    post:
+      summary: Load labelled demo data once
+      responses:
+        '201':
+          description: ok
+    delete:
+      summary: Remove demo data
+      responses:
+        '204':
+          description: ok
