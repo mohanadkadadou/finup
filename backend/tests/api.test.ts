@@ -546,3 +546,20 @@ describe("authorization: users cannot reach each other's data", () => {
     ).toBe(401);
   });
 });
+
+describe('bank institutions (Türkiye)', () => {
+  it('lists Turkish banks, none marked live, and requires sign-in', async () => {
+    expect((await request(app).get('/api/banks/institutions')).status).toBe(401);
+    const { agent } = await signUp('bank@example.com');
+    const r = await agent.get('/api/banks/institutions');
+    expect(r.status).toBe(200);
+    expect(r.body.country).toBe('TR');
+    expect(r.body.live_sync).toBe(false);
+    const names = r.body.institutions.map((i: { name: string }) => i.name);
+    expect(names).toEqual(expect.arrayContaining(['Ziraat Bankası', 'Garanti BBVA', 'Akbank']));
+    expect(r.body.institutions.every((i: { live: boolean }) => i.live === false)).toBe(true);
+    expect(new Set(r.body.institutions.map((i: { id: string }) => i.id)).size).toBe(
+      r.body.institutions.length,
+    );
+  });
+});

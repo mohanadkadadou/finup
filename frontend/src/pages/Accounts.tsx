@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
-import { ApiErr, api, errMsg } from '../api';
+import { Link, useNavigate } from 'react-router-dom';
+import { api, errMsg } from '../api';
 import { Alert, Badge, PageHeader } from '../components/ui';
 import { tr } from '../serverText';
 import { useT } from '../i18n';
@@ -11,6 +11,21 @@ interface Status {
   reason: string;
   alternatives: string[];
 }
+type Kind = 'state' | 'private' | 'participation' | 'digital';
+interface Institution {
+  id: string;
+  name: string;
+  kind: Kind;
+  live: boolean;
+}
+const KINDS: Kind[] = ['state', 'private', 'participation', 'digital'];
+const KIND_LABEL: Record<Kind, string> = {
+  state: 'State banks',
+  private: 'Private banks',
+  participation: 'Participation banks',
+  digital: 'Digital banks',
+};
+
 interface Account {
   id: string;
   name: string;
@@ -25,10 +40,19 @@ export function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [msg, setMsg] = useState<{ kind: 'error' | 'info'; text: string } | null>(null);
   const [f, setF] = useState({ name: '', institution: '', currency: 'TRY' });
+  const nav = useNavigate();
+  const [banks, setBanks] = useState<Institution[]>([]);
+  const [picker, setPicker] = useState(false);
+  const [q, setQ] = useState('');
+  const [kind, setKind] = useState<Kind | 'all'>('all');
+  const [chosen, setChosen] = useState<Institution | null>(null);
 
   const load = useCallback(async () => {
     try {
       setStatus(await api.get<Status>('/banks/status'));
+      setBanks(
+        (await api.get<{ institutions: Institution[] }>('/banks/institutions')).institutions,
+      );
       setAccounts((await api.get<{ accounts: Account[] }>('/accounts')).accounts);
     } catch (e) {
       setMsg({ kind: 'error', text: errMsg(e) });
@@ -38,13 +62,25 @@ export function AccountsPage() {
     void load();
   }, [load]);
 
-  const connect = async () => {
+  /** Live sync is unavailable, so choosing a bank opens a statement account for it and goes to Import. */
+  const openStatementAccount = async (bank: Institution) => {
     try {
-      await api.send('POST', '/banks/connect', {});
-    } catch (e) {
-      setMsg({ kind: e instanceof ApiErr && e.status === 409 ? 'info' : 'error', text: errMsg(e) });
+      const exists = accounts.some((a) => a.institution === bank.name && a.currency === 'TRY');
+      if (!exists)
+        await api.send('POST', '/accounts', {
+          name: `${bank.name} TRY`,
+          institution: bank.name,
+          currency: 'TRY',
+        });
+      nav('/import');
+    } catch (x) {
+      setMsg({ kind: 'error', text: errMsg(x) });
     }
   };
+  const shown = banks.filter(
+    (b) =>
+      (kind === 'all' || b.kind === kind) && b.name.toLowerCase().includes(q.trim().toLowerCase()),
+  );
   const add = async (e: FormEvent) => {
     e.preventDefault();
     try {
@@ -79,12 +115,86 @@ export function AccountsPage() {
           )}
         </p>
         <div className="row-flex">
-          <button onClick={() => void connect()}>{t('Connect a bank')}</button>
-          <Link className="btn primary" to="/import">
+          <button className="primary" onClick={() => setPicker((v) => !v)}>
+            {t('Connect a bank')}
+          </button>
+          <Link className="btn" to="/import">
             {t('Upload a statement instead')}
           </Link>
         </div>
       </section>
+      {picker && (
+        <section className="card mt bank-picker">
+          <div className="row-between">
+            <h2>{t('Choose your bank in Türkiye')}</h2>
+            <span className="muted small">{t('{n} banks', { n: shown.length })}</span>
+          </div>
+          <input
+            type="search"
+            placeholder={t('Search for a bank')}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label={t('Search for a bank')}
+          />
+          <div className="seg" role="group" aria-label={t('Bank type')}>
+            <button
+              type="button"
+              className={kind === 'all' ? 'on' : ''}
+              onClick={() => setKind('all')}
+            >
+              {t('All')}
+            </button>
+            {KINDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className={kind === k ? 'on' : ''}
+                onClick={() => setKind(k)}
+              >
+                {t(KIND_LABEL[k])}
+              </button>
+            ))}
+          </div>
+          <ul className="bank-grid">
+            {shown.map((b) => (
+              <li key={b.id}>
+                <button
+                  type="button"
+                  className={`bank-tile${chosen?.id === b.id ? ' on' : ''}`}
+                  onClick={() => setChosen(b)}
+                >
+                  <span className="bank-ico" aria-hidden="true">
+                    {b.name.charAt(0)}
+                  </span>
+                  <span className="bank-name">{b.name}</span>
+                  <span className="muted small">{t(KIND_LABEL[b.kind])}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {shown.length === 0 && <p className="muted">{t('No bank matches your search.')}</p>}
+          {chosen && (
+            <div className="bank-detail">
+              <h3>{chosen.name}</h3>
+              <p>
+                <Badge kind="warn">{t('Live sync not available yet')}</Badge>
+              </p>
+              <p className="muted small">
+                {t(
+                  'Automatic sync with Turkish banks needs a licensed account-information provider, which is not connected. You can still add {bank} transactions by uploading its statement (PDF, CSV or XLSX).',
+                  { bank: chosen.name },
+                )}
+              </p>
+              <div className="row-flex">
+                <button className="primary" onClick={() => void openStatementAccount(chosen)}>
+                  {t('Use {bank} statements', { bank: chosen.name })}
+                </button>
+                <button onClick={() => setChosen(null)}>{t('Cancel')}</button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
       <section className="card mt">
         <h2>{t('Statement accounts')}</h2>
         {accounts.length === 0 ? (
@@ -125,9 +235,15 @@ export function AccountsPage() {
           <label>
             {t('Institution')}
             <input
+              list="tr-banks"
               value={f.institution}
               onChange={(e) => setF({ ...f, institution: e.target.value })}
             />
+            <datalist id="tr-banks">
+              {banks.map((b) => (
+                <option key={b.id} value={b.name} />
+              ))}
+            </datalist>
           </label>
           <label>
             {t('Currency')}

@@ -1688,3 +1688,54 @@ main {
     background: var(--navy-950);
   }
 }
+
+/* Bank picker */
+.bank-picker input[type='search'] {
+  width: 100%;
+  margin: 4px 0 12px;
+}
+.bank-grid {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.bank-tile {
+  width: 100%;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 12px;
+  text-align: start;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+}
+.bank-tile:hover,
+.bank-tile.on {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.2);
+}
+.bank-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--green-deep), #1b8a6b);
+}
+.bank-name {
+  font-weight: 650;
+}
+.bank-detail {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--mint);
+  animation: rise 0.35s var(--ease) both;
+}

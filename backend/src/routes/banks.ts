@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { TURKISH_BANKS } from '../banks/turkey.js';
 import { bankStatus, getConfiguredProvider } from '../banks/provider.js';
 import { query } from '../db.js';
 import { ApiError } from '../errors.js';
@@ -8,6 +9,10 @@ export const banksRouter = Router();
 
 banksRouter.get('/status', (_req, res) => {
   res.json(bankStatus());
+});
+
+banksRouter.get('/institutions', (_req, res) => {
+  res.json({ country: 'TR', institutions: TURKISH_BANKS, live_sync: bankStatus().configured });
 });
 
 banksRouter.get(
