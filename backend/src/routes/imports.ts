@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { CATEGORIES } from '../categorize.js';
+import { CATEGORIES, categorize } from '../categorize.js';
 import { config } from '../config.js';
 import { query, tx, type Queryable } from '../db.js';
 import { ApiError } from '../errors.js';
@@ -567,6 +567,75 @@ importsRouter.post(
       skipped_invalid: c.invalid,
       skipped_excluded: c.total - c.included,
       flagged_imported: result.flaggedImported,
+    });
+  }),
+);
+
+/**
+ * Re-reads an already committed statement with the current rules and fixes the sign (money in/out) and
+ * the automatic category of its transactions. Used for imports made before direction was inferred from the
+ * running balance. Categories the user changed by hand are kept; rows with a clashing key are skipped.
+ */
+importsRouter.post(
+  '/:id/reanalyze',
+  wrap(async (req, res) => {
+    const userId = uid(req);
+    const batch = await getBatch(idParam(req), userId);
+    if (batch.status !== 'committed')
+      throw new ApiError(409, 'BATCH_NOT_COMMITTED', 'Only a committed import can be re-analyzed.');
+    if (!batch.mapping) throw new ApiError(409, 'NO_MAPPING', 'This import has no column mapping.');
+    const { rows } = stageRows(batch.grid, batch.mapping, {
+      accountId: batch.account_id,
+      existingKeys: new Set(),
+    });
+    let updated = 0;
+    let unchanged = 0;
+    let skipped = 0;
+    let unknownDirection = 0;
+    await tx(async (db) => {
+      for (const d of rows) {
+        if (d.amountMinor === null || d.bookedOn === null || d.currency === null) continue;
+        if (d.issues.some((i) => i.startsWith('Direction'))) unknownDirection++;
+        const cur = await query<{
+          id: string;
+          amount_minor: string;
+          description: string;
+          category: string;
+        }>(
+          'SELECT id, amount_minor, description, category FROM transactions WHERE user_id=$1 AND batch_id=$2 AND source_ref=$3',
+          [userId, batch.id, `${batch.filename}#row${d.rowRef}`],
+          db,
+        );
+        const t = cur[0];
+        if (!t) continue;
+        const old = Number(t.amount_minor);
+        if (old === d.amountMinor) {
+          unchanged++;
+          continue;
+        }
+        const clash = await query(
+          'SELECT 1 FROM transactions WHERE user_id=$1 AND dedupe_key=$2 AND id<>$3',
+          [userId, d.dedupeKey, t.id],
+          db,
+        );
+        if (clash.length) {
+          skipped++;
+          continue;
+        }
+        const wasAuto = t.category === categorize(t.description, old);
+        await query(
+          'UPDATE transactions SET amount_minor=$1, dedupe_key=$2, category=$3 WHERE id=$4',
+          [d.amountMinor, d.dedupeKey, wasAuto ? d.category : t.category, t.id],
+          db,
+        );
+        updated++;
+      }
+    });
+    res.json({
+      updated,
+      unchanged,
+      skipped_conflicts: skipped,
+      direction_unknown: unknownDirection,
     });
   }),
 );

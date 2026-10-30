@@ -584,3 +584,37 @@ describe('insights default month', () => {
     expect(r.body.months_available).toEqual(['2026-08', '2026-09']);
   });
 });
+
+describe('re-analyze a committed statement', () => {
+  it('restores money in/out from the running balance for imports made with the old rules', async () => {
+    const { agent } = await signUp('re@example.com');
+    const up = await upload(
+      agent,
+      makePdf([
+        'Date Description Amount Balance',
+        '05.09.2026 OPENING DEPOSIT 1.000,00 1.000,00',
+        '06.09.2026 CAFE RESTAURANT 250,00 750,00',
+        '07.09.2026 SALARY EMPLOYER 5.000,00 5.750,00',
+        '08.09.2026 MIGROS MARKET 100,00 5.650,00',
+      ]),
+      'tr.pdf',
+    );
+    expect(up.status).toBe(201);
+    await commit(agent, up.body.id, { confirmFlagged: true });
+    // Simulate the old behaviour: every amount stored as positive.
+    await pool.query('UPDATE transactions SET amount_minor = abs(amount_minor)');
+    const r = await agent.post(`/api/imports/${up.body.id}/reanalyze`).send({});
+    expect(r.status).toBe(200);
+    expect(r.body.updated).toBe(2);
+    const t = await agent.get('/api/transactions?pageSize=50');
+    const by = Object.fromEntries(
+      t.body.transactions.map((x: { description: string; amount_minor: number }) => [
+        x.description,
+        x.amount_minor,
+      ]),
+    );
+    expect(by['CAFE RESTAURANT']).toBe(-25000);
+    expect(by['SALARY EMPLOYER']).toBe(500000);
+    expect(by['MIGROS MARKET']).toBe(-10000);
+  });
+});

@@ -179,7 +179,9 @@ export function stageRows(
   const hasSignedAmounts =
     m.amount !== null &&
     body.some((b) => /^[\s(]*[-−–]|-\s*$|\)\s*$/.test(str(b.cells[m.amount!])));
-  const unsigned = m.amount !== null && m.type === null && !hasSignedAmounts;
+  // A mapped Type column that is empty on every row (PDF statements without DR/CR) gives no direction.
+  const typeUsable = m.type !== null && body.some((b) => str(b.cells[m.type!]) !== '');
+  const unsigned = m.amount !== null && !typeUsable && !hasSignedAmounts;
   const absAmounts: (number | null)[] = [];
   const balances: (number | null)[] = [];
   if (unsigned) {
@@ -234,7 +236,7 @@ export function stageRows(
 
     // Amount
     let amountMinor: number | null = null;
-    const typeText = m.type !== null ? str(b.cells[m.type]).toUpperCase() : '';
+    const typeText = typeUsable ? str(b.cells[m.type!]).toUpperCase() : '';
     if (m.amount !== null) {
       const pa = parseAmount(b.cells[m.amount], currency, m.decimalSeparator);
       if (!pa) invalid(`Amount "${str(b.cells[m.amount])}" is missing or not a number.`);
