@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { CategoryChip } from './category';
 import { dayLabel, fmt, monthLabel } from '../format';
@@ -263,6 +264,7 @@ export function Donut({
   total: number;
 }) {
   const { t } = useT();
+  const [active, setActive] = useState<string | null>(null);
   if (rows.length === 0 || total <= 0)
     return <p className="muted">{t('No expenses in this period.')}</p>;
   const shown = rows.slice(0, CAT_COLORS.length);
@@ -270,15 +272,20 @@ export function Donut({
   const parts = [
     ...shown.map((r, i) => ({
       key: r.category,
+      cat: r.category as string | null,
       label: t(r.category),
       minor: r.total_minor,
       color: CAT_COLORS[i]!,
     })),
-    ...(rest > 0 ? [{ key: '_o', label: t('Other'), minor: rest, color: CAT_OTHER }] : []),
+    ...(rest > 0
+      ? [{ key: '_o', cat: null, label: t('Other'), minor: rest, color: CAT_OTHER }]
+      : []),
   ];
+  const cur = parts.find((p) => p.key === active) ?? null;
   const R = 44;
   const C = 2 * Math.PI * R;
   let acc = 0;
+  const toggle = (key: string) => setActive((a) => (a === key ? null : key));
   return (
     <div className="donut">
       <div className="donut-ring">
@@ -294,11 +301,14 @@ export function Donut({
                 cx="60"
                 cy="60"
                 r={R}
-                className="donut-seg"
+                className={`donut-seg${active && active !== p.key ? ' dim' : ''}${active === p.key ? ' sel' : ''}`}
                 stroke={p.color}
                 strokeDasharray={`${Math.max(0, len - 1.5)} ${C}`}
                 strokeDashoffset={off}
                 style={{ animationDelay: `${0.15 + i * 0.1}s` }}
+                onMouseEnter={() => setActive(p.key)}
+                onMouseLeave={() => setActive(null)}
+                onClick={() => toggle(p.key)}
               >
                 <title>{`${p.label}: ${fmt(p.minor, currency)}`}</title>
               </circle>
@@ -306,22 +316,39 @@ export function Donut({
           })}
         </svg>
         <div className="donut-center">
-          <span className="small muted">{t('Expenses')}</span>
+          <span className="small muted">{cur ? cur.label : t('Expenses')}</span>
           <strong className="num">
-            <CountUp minor={total} currency={currency} />
+            {cur ? fmt(cur.minor, currency) : <CountUp minor={total} currency={currency} />}
           </strong>
-          <span className="small muted">{currency}</span>
+          <span className="small muted">
+            {cur ? `${((cur.minor / total) * 100).toFixed(0)}% · ${currency}` : currency}
+          </span>
         </div>
       </div>
       <ul className="donut-legend">
         {parts.map((p) => (
           <li key={p.key}>
-            <i style={{ background: p.color }} />
-            <span>{p.label}</span>
-            <span className="num muted small">{((p.minor / total) * 100).toFixed(0)}%</span>
+            <button
+              type="button"
+              className={`legend-btn${active === p.key ? ' on' : ''}`}
+              onMouseEnter={() => setActive(p.key)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(p.key)}
+              onBlur={() => setActive(null)}
+              onClick={() => toggle(p.key)}
+            >
+              <i style={{ background: p.color }} />
+              <span>{p.label}</span>
+              <span className="num muted small">{((p.minor / total) * 100).toFixed(0)}%</span>
+            </button>
           </li>
         ))}
       </ul>
+      {cur?.cat && (
+        <Link className="btn donut-go" to={`/transactions?category=${encodeURIComponent(cur.cat)}`}>
+          {t('View {category} transactions', { category: cur.label })}
+        </Link>
+      )}
     </div>
   );
 }

@@ -177,13 +177,22 @@ dataRouter.get(
     const months = [
       ...new Set(txs.filter((t) => t.currency === currency).map((t) => monthOf(t.booked_on))),
     ].sort();
-    const month = q.month ?? months[months.length - 1]!;
+    const expenseMonths = [
+      ...new Set(
+        txs
+          .filter((t) => t.currency === currency && t.amount_minor < 0)
+          .map((t) => monthOf(t.booked_on)),
+      ),
+    ].sort();
+    // Default to the latest month that actually has spending, so the page is never an empty month.
+    const month = q.month ?? expenseMonths[expenseMonths.length - 1] ?? months[months.length - 1]!;
     const period = monthPeriod(month);
     res.json({
       empty: false,
       currency,
       month,
       months_available: months,
+      expense_months: expenseMonths,
       summary: summarize(txs, currency, period),
       payees_month: topPayees(txs, currency, period),
       payees_all: topPayees(txs, currency, null),

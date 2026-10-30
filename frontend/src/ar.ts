@@ -437,6 +437,23 @@ export const AR: Record<string, string> = {
     'أرسلنا لك رمز دخول من 6 أرقام إلى بريدك. صالح لمدة 10 دقائق.',
   'Sign-in code': 'رمز الدخول',
   Other: 'أخرى',
+  'View {category} transactions': 'عرض معاملات {category}',
+  'What this page will show once you add data': 'شو رح تعرض هذه الصفحة بعد ما تضيف بياناتك',
+  'See which shops and people took the biggest share.': 'اعرف أي محلات وأشخاص أخذوا الحصة الأكبر.',
+  'Spot the category that leads every month.': 'اكتشف الفئة اللي تتصدّر كل شهر.',
+  'Find the days and weekdays you spend the most.':
+    'اعرف الأيام وأيام الأسبوع اللي بتصرف فيها أكثر.',
+  'Get tips built from your own spending.': 'نصائح مبنية على مصروفك أنت.',
+  'Everyday habits that work': 'عادات يومية فعّالة',
+  'General advice, not based on your transactions.': 'نصيحة عامة، وليست مبنية على معاملاتك.',
+  'Move money to savings on payday, before you spend it: pay yourself first.':
+    'حوّل مبلغاً للادخار يوم الراتب قبل ما تصرفه: ادفع لنفسك أولاً.',
+  'Wait 24 hours before buying anything non-essential that you did not plan.':
+    'انتظر 24 ساعة قبل شراء أي شي غير ضروري ما خططت له.',
+  'Review subscriptions and bank fees every three months and cancel what you did not use.':
+    'راجع الاشتراكات ورسوم البنك كل ثلاثة أشهر، والغِ اللي ما استخدمته.',
+  'There is no spending recorded in {month}.': 'ما في مصروفات مسجّلة في {month}.',
+  'Show {month}': 'اعرض {month}',
   'Latest transactions': 'آخر المعاملات',
   'Did you know?': 'هل تعلم؟',
   'Another fact': 'معلومة ثانية',

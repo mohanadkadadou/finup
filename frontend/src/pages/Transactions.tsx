@@ -40,7 +40,10 @@ export function TransactionsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(() => {
+    const c = new URLSearchParams(window.location.search).get('category') ?? '';
+    return CATEGORIES.includes(c) ? c : '';
+  });
   const [err, setErr] = useState<string | null>(null);
   const pageSize = 25;
 

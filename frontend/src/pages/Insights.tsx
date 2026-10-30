@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errMsg } from '../api';
-import { Alert, Empty, FactsCard, PageHeader, Skeleton, Stat, type Fact } from '../components/ui';
+import { Alert, FactsCard, PageHeader, Skeleton, Stat, type Fact } from '../components/ui';
 import { dayLabel, fmt, monthLabel, weekdayLabel } from '../format';
 import { useT } from '../i18n';
 
@@ -25,6 +25,7 @@ interface InsightsData {
   currency: string;
   month: string;
   months_available: string[];
+  expense_months: string[];
   summary: {
     expenses_minor: number;
     by_category: { category: string; total_minor: number; share_bp: number; count: number }[];
@@ -129,6 +130,12 @@ function CategoryMonths({
   );
 }
 
+const GENERAL_TIPS = [
+  'Move money to savings on payday, before you spend it: pay yourself first.',
+  'Wait 24 hours before buying anything non-essential that you did not plan.',
+  'Review subscriptions and bank fees every three months and cancel what you did not use.',
+];
+
 /** Keeps digits and currency in one left-to-right run inside Arabic sentences. */
 const isolate = (s: string) => `⁦${s}⁩`;
 
@@ -156,16 +163,43 @@ export function InsightsPage() {
   if (data.empty)
     return (
       <>
-        <PageHeader title={t('Insights')} />
-        <Empty title={t('No data to analyse')}>
-          <p>{t('Import and confirm a statement first.')}</p>
+        <PageHeader title={t('Insights')} sub={t('What this page will show once you add data')} />
+        <div className="grid g2">
+          {[
+            ['Who got most of your money', 'See which shops and people took the biggest share.'],
+            [
+              'Where most of your money went, month by month',
+              'Spot the category that leads every month.',
+            ],
+            ['Your most expensive days', 'Find the days and weekdays you spend the most.'],
+            ['Tips to waste less', 'Get tips built from your own spending.'],
+          ].map(([title, text]) => (
+            <section key={title} className="card preview">
+              <h2>{t(title!)}</h2>
+              <p className="muted">{t(text!)}</p>
+              <div className="preview-bars" aria-hidden="true">
+                <i style={{ width: '82%' }} />
+                <i style={{ width: '56%' }} />
+                <i style={{ width: '34%' }} />
+              </div>
+            </section>
+          ))}
+        </div>
+        <div className="row-flex mt">
           <Link className="btn primary" to="/import">
             {t('Upload a statement')}
           </Link>
-        </Empty>
+          <button
+            onClick={() => void api.send('POST', '/demo').then(() => window.location.reload())}
+          >
+            {t('Load sample demo data')}
+          </button>
+        </div>
       </>
     );
 
+  const noSpend = data.summary.expenses_minor === 0;
+  const latestSpend = data.expense_months[data.expense_months.length - 1];
   const cur = data.currency;
   const money = (n: number) => isolate(`${fmt(n, cur)} ${cur}`);
   const payees = scope === 'month' ? data.payees_month : data.payees_all;
@@ -230,159 +264,181 @@ export function InsightsPage() {
         </label>
       </PageHeader>
 
-      <div className="grid g4">
-        <Stat
-          label={t('Most paid to')}
-          value={topPayee ? topPayee.label : '—'}
-          sub={topPayee ? money(topPayee.total_minor) : undefined}
-        />
-        <Stat
-          label={t('Biggest category')}
-          value={topCat ? t(topCat.category) : '—'}
-          sub={
-            topCat
-              ? `${money(topCat.total_minor)} · ${(topCat.share_bp / 100).toFixed(1)}%`
-              : undefined
-          }
-        />
-        <Stat
-          label={t('Costliest day')}
-          value={topDay ? dayLabel(topDay.date) : '—'}
-          sub={
-            topDay ? `${weekdayLabel(topDay.weekday)} · ${money(topDay.total_minor)}` : undefined
-          }
-        />
-        <Stat
-          label={t('Priciest weekday')}
-          value={weekdayLabel(peakWd.weekday)}
-          sub={t('avg {amount} per day', { amount: money(peakWd.avg_per_day_minor) })}
-        />
-      </div>
+      {noSpend && (
+        <Alert kind="info">
+          {t('There is no spending recorded in {month}.', { month: monthLabel(data.month) })}{' '}
+          {latestSpend && latestSpend !== data.month && (
+            <button type="button" className="linkish" onClick={() => setMonth(latestSpend)}>
+              {t('Show {month}', { month: monthLabel(latestSpend) })}
+            </button>
+          )}
+        </Alert>
+      )}
+      {!noSpend && (
+        <>
+          <div className="grid g4">
+            <Stat
+              label={t('Most paid to')}
+              value={topPayee ? topPayee.label : '—'}
+              sub={topPayee ? money(topPayee.total_minor) : undefined}
+            />
+            <Stat
+              label={t('Biggest category')}
+              value={topCat ? t(topCat.category) : '—'}
+              sub={
+                topCat
+                  ? `${money(topCat.total_minor)} · ${(topCat.share_bp / 100).toFixed(1)}%`
+                  : undefined
+              }
+            />
+            <Stat
+              label={t('Costliest day')}
+              value={topDay ? dayLabel(topDay.date) : '—'}
+              sub={
+                topDay
+                  ? `${weekdayLabel(topDay.weekday)} · ${money(topDay.total_minor)}`
+                  : undefined
+              }
+            />
+            <Stat
+              label={t('Priciest weekday')}
+              value={weekdayLabel(peakWd.weekday)}
+              sub={t('avg {amount} per day', { amount: money(peakWd.avg_per_day_minor) })}
+            />
+          </div>
 
-      <div className="mt">
-        <FactsCard facts={data.facts} currency={cur} />
-      </div>
+          <div className="mt">
+            <FactsCard facts={data.facts} currency={cur} />
+          </div>
+        </>
+      )}
 
       <CategoryMonths data={data.category_months} money={money} />
 
-      <div className="grid g3 mt">
-        <section className="card">
-          <div className="row-between">
-            <h2>{t('Who got most of your money')}</h2>
-            <div className="seg" role="group" aria-label={t('Period')}>
-              <button
-                type="button"
-                className={scope === 'month' ? 'on' : ''}
-                onClick={() => setScope('month')}
-              >
-                {t('This month')}
-              </button>
-              <button
-                type="button"
-                className={scope === 'all' ? 'on' : ''}
-                onClick={() => setScope('all')}
-              >
-                {t('All time')}
-              </button>
-            </div>
-          </div>
-          {payees.length === 0 ? (
-            <p className="muted">{t('No expenses in this period.')}</p>
-          ) : (
-            <ol className="rank">
-              {payees.map((p, i) => (
-                <li key={p.label}>
-                  <span className="rank-n">{i + 1}</span>
-                  <div className="rank-body">
-                    <div className="cat-row">
-                      <strong>{p.label}</strong>
-                      <span className="num">{money(p.total_minor)}</span>
-                    </div>
-                    <div className="meter" role="presentation">
-                      <div style={{ width: `${Math.max(3, (p.total_minor / maxPayee) * 100)}%` }} />
-                    </div>
-                    <div className="muted small">
-                      {t(p.category)} · {t('{n} payments', { n: p.count })} ·{' '}
-                      {t('avg {amount}', { amount: money(p.avg_minor) })} ·{' '}
-                      {(p.share_bp / 100).toFixed(1)}%
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-
-        <section className="card">
-          <h2>{t('Where your money went')}</h2>
-          {data.summary.by_category.length === 0 ? (
-            <p className="muted">{t('No expenses in this period.')}</p>
-          ) : (
-            <ul className="cat-list">
-              {data.summary.by_category.map((c) => (
-                <li key={c.category}>
-                  <div className="cat-row">
-                    <span>{t(c.category)}</span>
-                    <span className="num">
-                      {money(c.total_minor)}{' '}
-                      <span className="muted small">{(c.share_bp / 100).toFixed(1)}%</span>
-                    </span>
-                  </div>
-                  <div className="meter" role="presentation">
-                    <div style={{ width: `${Math.max(2, c.share_bp / 100)}%` }} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      <div className="grid g2 mt">
-        <section className="card">
-          <h2>{t('Spending by day of the week')}</h2>
-          <div className="wd" role="img" aria-label={t('Average spending per weekday')}>
-            {order.map((i) => {
-              const w = data.weekday[i]!;
-              return (
-                <div
-                  key={i}
-                  className={`wd-col${w.weekday === peakWd.weekday && w.avg_per_day_minor > 0 ? ' peak' : ''}`}
-                >
-                  <span className="wd-val num small">
-                    {w.avg_per_day_minor > 0 ? fmt(w.avg_per_day_minor, cur) : ''}
-                  </span>
-                  <div className="wd-bar">
-                    <div style={{ height: `${(w.avg_per_day_minor / maxAvg) * 100}%` }} />
-                  </div>
-                  <span className="small">{weekdayLabel(i, 'short')}</span>
+      {!noSpend && (
+        <>
+          <div className="grid g3 mt">
+            <section className="card">
+              <div className="row-between">
+                <h2>{t('Who got most of your money')}</h2>
+                <div className="seg" role="group" aria-label={t('Period')}>
+                  <button
+                    type="button"
+                    className={scope === 'month' ? 'on' : ''}
+                    onClick={() => setScope('month')}
+                  >
+                    {t('This month')}
+                  </button>
+                  <button
+                    type="button"
+                    className={scope === 'all' ? 'on' : ''}
+                    onClick={() => setScope('all')}
+                  >
+                    {t('All time')}
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+              {payees.length === 0 ? (
+                <p className="muted">{t('No expenses in this period.')}</p>
+              ) : (
+                <ol className="rank">
+                  {payees.map((p, i) => (
+                    <li key={p.label}>
+                      <span className="rank-n">{i + 1}</span>
+                      <div className="rank-body">
+                        <div className="cat-row">
+                          <strong>{p.label}</strong>
+                          <span className="num">{money(p.total_minor)}</span>
+                        </div>
+                        <div className="meter" role="presentation">
+                          <div
+                            style={{ width: `${Math.max(3, (p.total_minor / maxPayee) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="muted small">
+                          {t(p.category)} · {t('{n} payments', { n: p.count })} ·{' '}
+                          {t('avg {amount}', { amount: money(p.avg_minor) })} ·{' '}
+                          {(p.share_bp / 100).toFixed(1)}%
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+
+            <section className="card">
+              <h2>{t('Where your money went')}</h2>
+              {data.summary.by_category.length === 0 ? (
+                <p className="muted">{t('No expenses in this period.')}</p>
+              ) : (
+                <ul className="cat-list">
+                  {data.summary.by_category.map((c) => (
+                    <li key={c.category}>
+                      <div className="cat-row">
+                        <span>{t(c.category)}</span>
+                        <span className="num">
+                          {money(c.total_minor)}{' '}
+                          <span className="muted small">{(c.share_bp / 100).toFixed(1)}%</span>
+                        </span>
+                      </div>
+                      <div className="meter" role="presentation">
+                        <div style={{ width: `${Math.max(2, c.share_bp / 100)}%` }} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </div>
-          <p className="muted small">
-            {t('Average spent on each day, in {currency}.', { currency: cur })}
-          </p>
-        </section>
-        <section className="card">
-          <h2>{t('Your most expensive days')}</h2>
-          {data.top_days.length === 0 ? (
-            <p className="muted">{t('No expenses in this period.')}</p>
-          ) : (
-            <ul className="cat-list">
-              {data.top_days.map((d) => (
-                <li key={d.date} className="cat-row">
-                  <span>
-                    {dayLabel(d.date)} · {weekdayLabel(d.weekday)}{' '}
-                    <span className="muted small">{t('{n} payments', { n: d.count })}</span>
-                  </span>
-                  <span className="num">{money(d.total_minor)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+
+          <div className="grid g2 mt">
+            <section className="card">
+              <h2>{t('Spending by day of the week')}</h2>
+              <div className="wd" role="img" aria-label={t('Average spending per weekday')}>
+                {order.map((i) => {
+                  const w = data.weekday[i]!;
+                  return (
+                    <div
+                      key={i}
+                      className={`wd-col${w.weekday === peakWd.weekday && w.avg_per_day_minor > 0 ? ' peak' : ''}`}
+                    >
+                      <span className="wd-val num small">
+                        {w.avg_per_day_minor > 0 ? fmt(w.avg_per_day_minor, cur) : ''}
+                      </span>
+                      <div className="wd-bar">
+                        <div style={{ height: `${(w.avg_per_day_minor / maxAvg) * 100}%` }} />
+                      </div>
+                      <span className="small">{weekdayLabel(i, 'short')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="muted small">
+                {t('Average spent on each day, in {currency}.', { currency: cur })}
+              </p>
+            </section>
+            <section className="card">
+              <h2>{t('Your most expensive days')}</h2>
+              {data.top_days.length === 0 ? (
+                <p className="muted">{t('No expenses in this period.')}</p>
+              ) : (
+                <ul className="cat-list">
+                  {data.top_days.map((d) => (
+                    <li key={d.date} className="cat-row">
+                      <span>
+                        {dayLabel(d.date)} · {weekdayLabel(d.weekday)}{' '}
+                        <span className="muted small">{t('{n} payments', { n: d.count })}</span>
+                      </span>
+                      <span className="num">{money(d.total_minor)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        </>
+      )}
 
       <section className="card mt">
         <h2>{t('Tips to waste less')}</h2>
@@ -399,6 +455,20 @@ export function InsightsPage() {
               </li>
             ))}
           </ul>
+        )}
+        {data.tips.length < 3 && (
+          <>
+            <h3 className="mt">{t('Everyday habits that work')}</h3>
+            <ul className="tips">
+              {GENERAL_TIPS.map((g) => (
+                <li key={g}>
+                  <span className="tip-dot soft" aria-hidden="true" />
+                  <span>{t(g)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="muted small">{t('General advice, not based on your transactions.')}</p>
+          </>
         )}
         <p className="muted small mt">
           {t(

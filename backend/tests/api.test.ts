@@ -563,3 +563,24 @@ describe('bank institutions (Türkiye)', () => {
     );
   });
 });
+
+describe('insights default month', () => {
+  it('opens on the latest month that has spending, not a later income-only month', async () => {
+    const { agent, id } = await signUp('im@example.com');
+    const acc = await agent.post('/api/accounts').send({ name: 'Main', currency: 'TRY' });
+    const rows: [string, string, number, string][] = [
+      ['2026-08-05', 'Market', -50000, 'Groceries'],
+      ['2026-09-01', 'Salary', 900000, 'Salary'],
+    ];
+    for (const [d, desc, amt, cat] of rows)
+      await pool.query(
+        'INSERT INTO transactions(user_id, account_id, booked_on, description, amount_minor, currency, category) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [id, acc.body.id ?? acc.body.account?.id, d, desc, amt, 'TRY', cat],
+      );
+    const r = await agent.get('/api/insights');
+    expect(r.status).toBe(200);
+    expect(r.body.month).toBe('2026-08');
+    expect(r.body.expense_months).toEqual(['2026-08']);
+    expect(r.body.months_available).toEqual(['2026-08', '2026-09']);
+  });
+});
