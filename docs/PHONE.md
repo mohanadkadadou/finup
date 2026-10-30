@@ -27,3 +27,14 @@ It then opens full screen without browser chrome.
 ## One-click on Render
 
 Dashboard → **New → Blueprint** → select this GitHub repo. `render.yaml` creates the web service and a PostgreSQL database. After the first deploy set `APP_URL` to the service's `https://….onrender.com` address, then open it on the phone and install to the home screen. (Free-tier databases expire; use a paid plan for real data.)
+
+## Vercel for the frontend (+ backend on Render)
+
+Vercel serves the React app (fast CDN, HTTPS). The API needs a long-running Node server and PostgreSQL, so it stays on Render (see `render.yaml`).
+
+1. Deploy the backend on Render first and note its URL, e.g. `https://finup.onrender.com`.
+2. In `frontend/vercel.json` replace `REPLACE-WITH-YOUR-BACKEND-HOST` with that host, commit and push.
+3. Vercel → **Add New → Project** → import `mohanadkadadou/finup` → **Root Directory: `frontend`** → Deploy.
+4. On Render set `APP_URL` to the Vercel URL (used in emailed links).
+
+`/api/*` is proxied by Vercel to Render, so the browser sees one origin and the session cookie works unchanged.
